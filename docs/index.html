@@ -287,6 +287,20 @@ Open **5 terminals** (1 Java + 4 Python venvs):
 | Cost Drift | 8003 | http://localhost:8003/ |
 
 See [Completion Status](#status) for what's built vs planned.
+
+---
+
+## Docker — run both services (recommended for pilots)
+
+```powershell
+cd support-decision-engine
+$env:SDE_API_KEY = "dev-api-key-change-me"
+docker compose up --build
+```
+
+Dashboard: http://localhost:8080/ · Engine: http://localhost:8000/docs
+
+When `SDE_API_KEY` is set, the dashboard prompts for the key once (stored in session).
 </script>
 
 <script type="text/markdown" id="md-portfolio">
@@ -1192,7 +1206,7 @@ Honest scorecard. **MVP demo-ready** = runs offline with mock data. **Production
 
 | Product | MVP code | UI | Tests | Real integrations | Production-ready |
 |---------|----------|-----|-------|-------------------|------------------|
-| Support Decision Engine | **Done** | **Done** | **Done** | Stubbed (Zendesk/Stripe/LLM) | Pilot-ready with setup |
+| Support Decision Engine | **Done** | **Done** | **Done** | Zendesk HMAC + Stripe email lookup | **Pilot-ready** |
 | Churn Causality Engine | **Done** | **Done** | Partial | Mock analytics only | Demo-ready |
 | Knowledge Search | **Done** | **Done** | Partial | Mock corpus only | Demo-ready |
 | Cost Drift Detector | **Done** | **Done** | Partial | Mock AWS billing only | Demo-ready |
@@ -1206,18 +1220,21 @@ Honest scorecard. **MVP demo-ready** = runs offline with mock data. **Production
 ### Done
 - Python pipeline: webhook → context → policy → LLM/heuristic → **orchestrator** → decision
 - Policy `allowed_actions` trust boundary + refund amount capping
-- Java audit store + agent dashboard (approve/override/escalate + stats)
-- Zendesk/Intercom webhook adapters (payload normalization)
-- Mock customer context + Stripe provider skeleton
-- Demo script (`simulate_ticket.py`), policy unit tests, orchestrator tests
-- GTM docs: outreach, demo script, security, pilot agreement
+- Java audit store + **Tailwind agent dashboard** (confidence bands, override modal, policy report)
+- **API key auth** on Java (`SDE_API_KEY` + `X-API-Key` header) and Python (`ENGINE_API_KEY`)
+- **Zendesk HMAC** webhook verification (`ZENDESK_WEBHOOK_SECRET`)
+- **Stripe provider** with email → customer lookup, disputes, retries
+- **Retry + backoff** on audit POST, Stripe, and LLM (heuristic fallback)
+- **Policy tuning report** — `GET /api/reports/policy-tuning`
+- **Docker Compose** — single-command local stack
+- Demo script, orchestrator tests, security/retry tests
 
-### Not done (intentional for MVP)
-- Real Stripe field mapping in production
-- Webhook signature verification
-- Auth / multi-tenant
+### Not done (next for enterprise)
+- Postgres instead of H2 (documented swap in `application.properties`)
+- Persistent message queue if audit store is down
+- Intercom webhook signature verification
 - Zendesk sidebar embed (uses standalone dashboard)
-- Live LLM required (heuristic works offline)
+- Multi-tenant / SSO (Clerk/Auth0)
 
 ---
 
@@ -1370,6 +1387,24 @@ Hard rules (policy) -> Soft reasoning (LLM) -> Human decision -> Audit
 | GET | `/api/decisions` | List queue |
 | POST | `/api/decisions/{id}/action` | Approve / override / escalate |
 | GET | `/api/stats` | Override rate, agreement rate |
+| GET | `/api/reports/policy-tuning` | Policy override report (feedback loop) |
+| GET | `/api/health` | Service + DB status |
+| GET | `/api/config` | Auth required? (dashboard bootstrap) |
+
+**Auth:** set `SDE_API_KEY` on Java; send header `X-API-Key: <key>` on all API calls except `/api/health` and `/api/config`.
+
+---
+
+## Production env vars
+
+| Variable | Service | Purpose |
+|----------|---------|---------|
+| `SDE_API_KEY` | Java + Python | Protects audit API + dashboard |
+| `ENGINE_API_KEY` | Python | Protects `/decide`, webhooks, `/admin` |
+| `ZENDESK_WEBHOOK_SECRET` | Python | HMAC on `/webhooks/zendesk` |
+| `STRIPE_API_KEY` + `CONTEXT_PROVIDER=stripe` | Python | Real billing context |
+
+**Docker:** `docker compose up --build` from repo root.
 
 ---
 

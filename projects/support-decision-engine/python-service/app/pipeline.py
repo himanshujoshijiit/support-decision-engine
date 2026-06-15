@@ -36,7 +36,8 @@ class DecisionPipeline:
         return len(self._policy_engine._rules)  # noqa: SLF001 - intentional introspection
 
     def run(self, ticket: Ticket, persist: bool = True) -> Decision:
-        context = self._context_provider.fetch(ticket.customer_id)
+        email = ticket.requester_email or ticket.metadata.get("requester_email")
+        context = self._context_provider.fetch(ticket.customer_id, email=email or None)
 
         facts = build_facts(ticket, context)
         policy_result = self._policy_engine.evaluate(facts)

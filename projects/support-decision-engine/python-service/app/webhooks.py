@@ -59,21 +59,29 @@ def from_zendesk(payload: dict[str, Any]) -> Ticket:
     text = f"{subject}\n{body}"
     refund_requested, amount = detect_refund(text)
     requester = t.get("requester") or {}
+    requester_email = (requester.get("email") or t.get("requester_email") or "").strip()
+    customer_id = str(
+        t.get("requester_id")
+        or requester.get("id")
+        or requester_email
+        or "unknown"
+    )
     return Ticket(
         ticket_id=str(t.get("id") or payload.get("id") or "unknown"),
-        customer_id=str(
-            t.get("requester_id")
-            or requester.get("id")
-            or requester.get("email")
-            or "unknown"
-        ),
+        customer_id=customer_id,
+        requester_email=requester_email,
         subject=subject,
         body=body,
         source="zendesk",
         category=detect_category(text),
         refund_requested=refund_requested,
         requested_refund_usd=amount,
-        metadata={"priority": t.get("priority"), "tags": t.get("tags", [])},
+        metadata={
+            "priority": t.get("priority"),
+            "tags": t.get("tags", []),
+            "requester_email": requester_email,
+            "zendesk_status": t.get("status"),
+        },
     )
 
 

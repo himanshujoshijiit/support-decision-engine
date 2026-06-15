@@ -46,6 +46,17 @@ class Settings:
             os.getenv("POLICIES_PATH", str(BASE_DIR / "config" / "policies.json"))
         )
 
+        # API keys — blank disables auth (local dev).
+        self.engine_api_key: str | None = os.getenv("ENGINE_API_KEY") or None
+        self.sde_api_key: str | None = os.getenv("SDE_API_KEY") or None
+
+        # Zendesk webhook signing secret (from Zendesk Admin → Webhooks).
+        self.zendesk_webhook_secret: str | None = os.getenv("ZENDESK_WEBHOOK_SECRET") or None
+
+        # Retry settings for external calls.
+        self.retry_attempts: int = int(os.getenv("RETRY_ATTEMPTS", "3"))
+        self.retry_base_delay: float = float(os.getenv("RETRY_BASE_DELAY", "0.5"))
+
     @property
     def llm_is_live(self) -> bool:
         """True when a real LLM provider is configured."""

@@ -1,0 +1,40 @@
+# Decision Intelligence Suite — local production stack
+# Usage:  cp projects/support-decision-engine/python-service/.env.example .env  (then edit)
+#         docker compose up --build
+
+services:
+  audit:
+    build: ./java-service
+    ports:
+      - "8080:8080"
+    environment:
+      SDE_API_KEY: ${SDE_API_KEY:-dev-api-key-change-me}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  engine:
+    build: ./projects/support-decision-engine/python-service
+    ports:
+      - "8000:8000"
+    depends_on:
+      audit:
+        condition: service_healthy
+    environment:
+      AUDIT_BASE_URL: http://audit:8080
+      AUDIT_ENABLED: "true"
+      SDE_API_KEY: ${SDE_API_KEY:-dev-api-key-change-me}
+      ENGINE_API_KEY: ${ENGINE_API_KEY:-}
+      ZENDESK_WEBHOOK_SECRET: ${ZENDESK_WEBHOOK_SECRET:-}
+      CONTEXT_PROVIDER: ${CONTEXT_PROVIDER:-mock}
+      LLM_PROVIDER: ${LLM_PROVIDER:-heuristic}
+      STRIPE_API_KEY: ${STRIPE_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5

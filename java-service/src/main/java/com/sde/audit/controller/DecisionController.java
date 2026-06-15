@@ -1,6 +1,10 @@
 package com.sde.audit.controller;
 
+import com.sde.audit.config.SdeProperties;
 import com.sde.audit.dto.ActionRequest;
+import com.sde.audit.dto.ConfigResponse;
+import com.sde.audit.dto.HealthResponse;
+import com.sde.audit.dto.PolicyTuningReport;
 import com.sde.audit.dto.StatsResponse;
 import com.sde.audit.model.Decision;
 import com.sde.audit.model.DecisionStatus;
@@ -17,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
 import java.util.List;
 
 @RestController
@@ -25,9 +31,13 @@ import java.util.List;
 public class DecisionController {
 
     private final DecisionService service;
+    private final SdeProperties properties;
+    private final DataSource dataSource;
 
-    public DecisionController(DecisionService service) {
+    public DecisionController(DecisionService service, SdeProperties properties, DataSource dataSource) {
         this.service = service;
+        this.properties = properties;
+        this.dataSource = dataSource;
     }
 
     /** Ingest a decision from the Python engine. */
@@ -66,8 +76,26 @@ public class DecisionController {
         return service.stats();
     }
 
+    /** Policy tuning report — which rules/actions get overridden most. */
+    @GetMapping("/reports/policy-tuning")
+    public PolicyTuningReport policyTuningReport() {
+        return service.policyTuningReport();
+    }
+
+    /** Public bootstrap config for the agent dashboard. */
+    @GetMapping("/config")
+    public ConfigResponse config() {
+        return new ConfigResponse(properties.authEnabled(), "0.2.0");
+    }
+
     @GetMapping("/health")
-    public ResponseEntity<String> health() {
-        return ResponseEntity.ok("ok");
+    public ResponseEntity<HealthResponse> health() {
+        String db = "unknown";
+        try (Connection conn = dataSource.getConnection()) {
+            db = conn.isValid(2) ? "up" : "down";
+        } catch (Exception e) {
+            db = "down";
+        }
+        return ResponseEntity.ok(new HealthResponse("ok", db, properties.authEnabled()));
     }
 }

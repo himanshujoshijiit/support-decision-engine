@@ -84,3 +84,26 @@ pytest
 
 Edit `config/policies.json` (rules are sorted by `priority`, highest wins) and call
 `POST /admin/reload-policies` — no redeploy. This is the file an ops team owns.
+
+## Production setup
+
+Copy `.env.example` to `.env` and configure:
+
+| Variable | Purpose |
+|---|---|
+| `SDE_API_KEY` | Shared key for Java audit API + dashboard (header: `X-API-Key`) |
+| `ENGINE_API_KEY` | Protects Python `/decide`, webhooks, `/admin/*` |
+| `ZENDESK_WEBHOOK_SECRET` | HMAC verification on `/webhooks/zendesk` |
+| `STRIPE_API_KEY` + `CONTEXT_PROVIDER=stripe` | Real billing context (email → Stripe customer lookup) |
+| `RETRY_ATTEMPTS` / `RETRY_BASE_DELAY` | Exponential backoff for audit + Stripe calls |
+
+**Docker (both services):**
+
+```bash
+# from repo root
+docker compose up --build
+```
+
+Dashboard: http://localhost:8080/ · Engine: http://localhost:8000/docs
+
+When `SDE_API_KEY` is set, the dashboard prompts for the key on first load (stored in session).

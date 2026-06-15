@@ -4,148 +4,98 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Support Decision Engine — Agent Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            panel: '#171a21',
+            border: '#2a2f3a',
+          }
+        }
+      }
+    }
+  </script>
   <style>
-    :root {
-      --bg: #0f1115;
-      --panel: #171a21;
-      --panel-2: #1f232c;
-      --border: #2a2f3a;
-      --text: #e6e9ef;
-      --muted: #98a2b3;
-      --accent: #5b8def;
-      --green: #2ecc71;
-      --amber: #f5a623;
-      --red: #e5484d;
-      --purple: #a07bff;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: var(--bg); color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    header {
-      padding: 18px 28px; border-bottom: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: space-between; gap: 16px;
-      background: var(--panel); position: sticky; top: 0; z-index: 5;
-    }
-    header h1 { font-size: 18px; margin: 0; font-weight: 650; }
-    header .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
-    .stats { display: flex; gap: 10px; flex-wrap: wrap; }
-    .stat {
-      background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
-      padding: 8px 14px; min-width: 84px; text-align: center;
-    }
-    .stat .n { font-size: 20px; font-weight: 700; }
-    .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-    main { padding: 24px 28px; max-width: 1100px; margin: 0 auto; }
-    .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
-    .toolbar .spacer { flex: 1; }
-    button {
-      font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--border);
-      background: var(--panel-2); color: var(--text); padding: 8px 14px; transition: .12s;
-    }
-    button:hover { border-color: var(--accent); }
-    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-    button.green { background: var(--green); border-color: var(--green); color: #08130b; font-weight: 600; }
-    button.amber { background: transparent; border-color: var(--amber); color: var(--amber); }
-    button.red { background: transparent; border-color: var(--red); color: var(--red); }
-    .filter.active { border-color: var(--accent); color: var(--accent); }
-    .empty { color: var(--muted); padding: 40px; text-align: center; border: 1px dashed var(--border); border-radius: 12px; }
-    .card {
-      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-      padding: 18px; margin-bottom: 14px;
-    }
-    .card .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-    .ticket-id { font-size: 12px; color: var(--muted); }
-    .subject { font-size: 15.5px; font-weight: 600; margin: 2px 0 6px; }
-    .action-badge {
-      font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px;
-      white-space: nowrap;
-    }
-    .a-APPROVE_REFUND { background: rgba(46,204,113,.16); color: var(--green); }
-    .a-DENY_REFUND { background: rgba(229,72,77,.16); color: var(--red); }
-    .a-ESCALATE { background: rgba(245,166,35,.16); color: var(--amber); }
-    .a-PRIORITY_ROUTE { background: rgba(160,123,255,.18); color: var(--purple); }
-    .a-ASK_CLARIFICATION { background: rgba(91,141,239,.16); color: var(--accent); }
-    .a-RESPOND { background: rgba(152,162,179,.16); color: var(--muted); }
-    .reason { color: #cdd3df; font-size: 13.5px; line-height: 1.5; margin: 10px 0; }
-    .meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
-    .chip {
-      font-size: 11px; padding: 3px 9px; border-radius: 999px;
-      background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
-    }
-    .chip.flag { color: var(--amber); border-color: rgba(245,166,35,.4); }
-    .chip.allow { color: var(--accent); border-color: rgba(91,141,239,.4); }
-    .clamp {
-      margin: 10px 0; padding: 8px 12px; border-radius: 8px; font-size: 12.5px;
-      background: rgba(229,72,77,.1); border: 1px solid rgba(229,72,77,.4); color: var(--red);
-    }
-    .clarify {
-      margin: 10px 0; padding: 8px 12px; border-radius: 8px; font-size: 12.5px;
-      background: rgba(91,141,239,.1); border: 1px solid rgba(91,141,239,.35); color: var(--accent);
-    }
-    .allow-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
-    .allow-row .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
-    .conf-wrap { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-    .conf-bar { flex: 1; height: 6px; border-radius: 999px; background: var(--panel-2); overflow: hidden; max-width: 220px; }
-    .conf-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); }
-    .conf-num { font-size: 12px; color: var(--muted); }
-    .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-    .status-tag { font-size: 11px; padding: 3px 9px; border-radius: 999px; font-weight: 600; }
-    .s-PENDING { background: rgba(91,141,239,.16); color: var(--accent); }
-    .s-APPROVED { background: rgba(46,204,113,.16); color: var(--green); }
-    .s-OVERRIDDEN { background: rgba(245,166,35,.16); color: var(--amber); }
-    .s-ESCALATED { background: rgba(160,123,255,.18); color: var(--purple); }
-    .trail { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 12px; color: var(--muted); }
-    .trail .line { margin: 4px 0; }
-    details.context { margin-top: 10px; }
-    details.context summary { cursor: pointer; color: var(--muted); font-size: 12px; }
-    details.context pre {
-      background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
-      padding: 10px; overflow: auto; font-size: 11.5px; color: #c4cad6;
-    }
-    .feedback {
-      margin-top: 28px; background: var(--panel); border: 1px solid var(--border);
-      border-radius: 14px; padding: 18px;
-    }
-    .feedback h2 { font-size: 14px; margin: 0 0 4px; }
-    .feedback .hint { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
-    .ov { font-size: 12.5px; padding: 8px 0; border-top: 1px solid var(--border); }
-    .ov b { color: var(--text); }
+    body { background: #0f1115; }
+    .conf-high { background: rgba(46,204,113,.15); color: #2ecc71; border-color: rgba(46,204,113,.4); }
+    .conf-med { background: rgba(245,166,35,.12); color: #f5a623; border-color: rgba(245,166,35,.4); }
+    .conf-low { background: rgba(229,72,77,.12); color: #e5484d; border-color: rgba(229,72,77,.4); }
   </style>
 </head>
-<body>
-  <header>
+<body class="text-slate-200 min-h-screen">
+
+<!-- API key gate -->
+<div id="auth-gate" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+  <div class="bg-panel border border-border rounded-2xl p-6 max-w-md w-full shadow-2xl">
+    <h2 class="text-lg font-semibold mb-1">API key required</h2>
+    <p class="text-sm text-slate-400 mb-4">Enter the <code class="text-blue-300">SDE_API_KEY</code> configured on the audit service.</p>
+    <input id="api-key-input" type="password" placeholder="X-API-Key" class="w-full bg-slate-900 border border-border rounded-lg px-3 py-2 mb-3 text-sm" />
+    <button id="api-key-save" class="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-lg py-2 text-sm font-medium">Continue</button>
+  </div>
+</div>
+
+<!-- Override modal -->
+<div id="override-modal" class="hidden fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4">
+  <div class="bg-panel border border-border rounded-2xl p-6 max-w-lg w-full">
+    <h2 class="text-lg font-semibold mb-4">Override recommendation</h2>
+    <label class="block text-xs text-slate-400 mb-1">Final action</label>
+    <select id="ov-action" class="w-full bg-slate-900 border border-border rounded-lg px-3 py-2 mb-3 text-sm">
+      <option value="DENY_REFUND">Deny refund</option>
+      <option value="APPROVE_REFUND">Approve refund</option>
+      <option value="ESCALATE">Escalate</option>
+      <option value="RESPOND">Respond</option>
+      <option value="PRIORITY_ROUTE">Priority route</option>
+    </select>
+    <label class="block text-xs text-slate-400 mb-1">Reason (captured for policy tuning)</label>
+    <textarea id="ov-reason" rows="3" class="w-full bg-slate-900 border border-border rounded-lg px-3 py-2 mb-4 text-sm" placeholder="Why are you overriding the engine?"></textarea>
+    <div class="flex gap-2 justify-end">
+      <button id="ov-cancel" class="px-4 py-2 rounded-lg border border-border text-sm hover:bg-slate-800">Cancel</button>
+      <button id="ov-submit" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium">Submit override</button>
+    </div>
+  </div>
+</div>
+
+<header class="sticky top-0 z-10 bg-panel border-b border-border px-6 py-4">
+  <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-4">
     <div>
-      <h1>Support Decision Engine — Agent Console</h1>
-      <div class="sub">Every decision recommended, actioned, and logged. Full traceability.</div>
+      <h1 class="text-lg font-semibold tracking-tight">Support Decision Engine</h1>
+      <p class="text-xs text-slate-400">Agent console · every recommendation audited</p>
     </div>
-    <div class="stats" id="stats"></div>
-  </header>
+    <div id="stats" class="flex flex-wrap gap-2"></div>
+  </div>
+</header>
 
-  <main>
-    <div class="toolbar">
-      <button class="filter active" data-status="">All</button>
-      <button class="filter" data-status="PENDING">Pending</button>
-      <button class="filter" data-status="APPROVED">Approved</button>
-      <button class="filter" data-status="OVERRIDDEN">Overridden</button>
-      <button class="filter" data-status="ESCALATED">Escalated</button>
-      <span class="spacer"></span>
-      <button class="primary" id="refresh">Refresh</button>
+<main class="max-w-6xl mx-auto px-6 py-6">
+  <div class="flex flex-wrap gap-2 items-center mb-5">
+    <div id="filters" class="flex flex-wrap gap-1"></div>
+    <div class="flex-1"></div>
+    <button id="refresh" class="text-sm px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium">Refresh</button>
+  </div>
+
+  <div id="queue" class="space-y-3"></div>
+
+  <section class="mt-8 grid md:grid-cols-2 gap-4">
+    <div class="bg-panel border border-border rounded-2xl p-5">
+      <h2 class="text-sm font-semibold mb-1">Policy tuning report</h2>
+      <p class="text-xs text-slate-400 mb-4">Rules and actions agents override most — tune these first.</p>
+      <div id="policy-report" class="text-sm"></div>
     </div>
-
-    <div id="queue"></div>
-
-    <section class="feedback">
-      <h2>Feedback loop — recent overrides</h2>
-      <div class="hint">When agents override the engine, the reason is captured here. Rising overrides on a policy = tune that rule.</div>
-      <div id="overrides"></div>
-    </section>
-  </main>
+    <div class="bg-panel border border-border rounded-2xl p-5">
+      <h2 class="text-sm font-semibold mb-1">Recent overrides</h2>
+      <p class="text-xs text-slate-400 mb-4">Feedback loop — rising overrides = tune that policy rule.</p>
+      <div id="overrides" class="text-sm"></div>
+    </div>
+  </section>
+</main>
 
 <script>
-const API = "";  // same origin
+const API = "";
 let currentStatus = "";
+let apiKey = sessionStorage.getItem("sde_api_key") || "";
+let authRequired = false;
+let overrideDecisionId = null;
 
 const ACTIONS_LABEL = {
   APPROVE_REFUND: "Approve refund",
@@ -156,10 +106,57 @@ const ACTIONS_LABEL = {
   RESPOND: "Respond"
 };
 
+const FILTERS = [
+  ["", "All"],
+  ["PENDING", "Pending"],
+  ["APPROVED", "Approved"],
+  ["OVERRIDDEN", "Overridden"],
+  ["ESCALATED", "Escalated"],
+];
+
+function confidenceBand(c) {
+  if (c >= 0.85) return { label: "High", hint: "Safe to auto-execute", cls: "conf-high" };
+  if (c >= 0.60) return { label: "Medium", hint: "Review recommended", cls: "conf-med" };
+  return { label: "Low", hint: "Manual decision only", cls: "conf-low" };
+}
+
+async function apiFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  if (apiKey) headers["X-API-Key"] = apiKey;
+  const r = await fetch(`${API}${path}`, { ...opts, headers });
+  if (r.status === 401) {
+    document.getElementById("auth-gate").classList.remove("hidden");
+    throw new Error("unauthorized");
+  }
+  if (!r.ok) throw new Error(`${r.status} ${path}`);
+  const ct = r.headers.get("content-type") || "";
+  return ct.includes("json") ? r.json() : r.text();
+}
+
+async function initAuth() {
+  try {
+    const cfg = await fetch(`${API}/api/config`).then(r => r.json());
+    authRequired = cfg.authRequired;
+    if (authRequired && !apiKey) {
+      document.getElementById("auth-gate").classList.remove("hidden");
+    }
+  } catch (e) { /* dev without config */ }
+}
+
+document.getElementById("api-key-save").addEventListener("click", () => {
+  apiKey = document.getElementById("api-key-input").value.trim();
+  if (!apiKey) return;
+  sessionStorage.setItem("sde_api_key", apiKey);
+  document.getElementById("auth-gate").classList.add("hidden");
+  refresh();
+});
+
+document.getElementById("filters").innerHTML = FILTERS.map(([v, l]) =>
+  `<button data-status="${v}" class="filter text-xs px-3 py-1.5 rounded-lg border border-border hover:border-blue-500 ${v === "" ? "border-blue-500 text-blue-300" : ""}">${l}</button>`
+).join("");
+
 async function loadStats() {
-  const r = await fetch(`${API}/api/stats`);
-  const s = await r.json();
-  const el = document.getElementById("stats");
+  const s = await apiFetch("/api/stats");
   const items = [
     ["Total", s.total],
     ["Pending", s.pending],
@@ -167,82 +164,112 @@ async function loadStats() {
     ["Agree %", Math.round((s.agreement_rate || 0) * 100)],
     ["Override %", Math.round((s.override_rate || 0) * 100)],
   ];
-  el.innerHTML = items.map(([l, n]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+  document.getElementById("stats").innerHTML = items.map(([l, n]) =>
+    `<div class="text-center bg-slate-800/80 border border-border rounded-xl px-3 py-2 min-w-[72px]">
+      <div class="text-lg font-bold">${n}</div><div class="text-[10px] uppercase tracking-wide text-slate-400">${l}</div></div>`
+  ).join("");
   renderOverrides(s.recent_overrides || []);
+}
+
+async function loadPolicyReport() {
+  try {
+    const r = await apiFetch("/api/reports/policy-tuning");
+    const el = document.getElementById("policy-report");
+    if (!r.by_policy_rule?.length) {
+      el.innerHTML = `<p class="text-slate-500 text-xs">No override data yet.</p>`;
+      return;
+    }
+    const rules = r.by_policy_rule.slice(0, 6).map(rule => `
+      <div class="flex justify-between items-center py-2 border-t border-border first:border-0">
+        <div>
+          <div class="font-medium text-slate-200">${escapeHtml(rule.rule_id)}</div>
+          <div class="text-xs text-slate-500">${rule.override_count} overrides / ${rule.decision_count} decisions</div>
+        </div>
+        <span class="text-xs px-2 py-1 rounded-full ${rule.override_rate > 0.3 ? "conf-low" : "conf-med"} border">${Math.round(rule.override_rate * 100)}%</span>
+      </div>`).join("");
+    el.innerHTML = `<div class="text-xs text-slate-400 mb-2">Overall override rate: <b class="text-slate-200">${Math.round(r.override_rate * 100)}%</b></div>${rules}`;
+  } catch (e) {
+    document.getElementById("policy-report").innerHTML = `<p class="text-slate-500 text-xs">Could not load report.</p>`;
+  }
 }
 
 function renderOverrides(list) {
   const el = document.getElementById("overrides");
-  if (!list.length) { el.innerHTML = `<div class="hint">No overrides yet.</div>`; return; }
+  if (!list.length) { el.innerHTML = `<p class="text-slate-500 text-xs">No overrides yet.</p>`; return; }
   el.innerHTML = list.map(o => `
-    <div class="ov">
-      <b>#${o.decision_id}</b> · ticket ${escapeHtml(o.ticket_id)} —
-      engine said <b>${ACTIONS_LABEL[o.recommended_action] || o.recommended_action}</b>,
-      agent chose <b>${escapeHtml(o.final_action || "—")}</b>.
-      <br/>Reason: ${escapeHtml(o.override_reason || "(none)")}
+    <div class="py-2 border-t border-border first:border-0 text-xs">
+      <b>#${o.decision_id}</b> · ticket ${escapeHtml(o.ticket_id)}<br/>
+      Engine: <b>${ACTIONS_LABEL[o.recommended_action] || o.recommended_action}</b> →
+      Agent: <b>${escapeHtml(o.final_action || "—")}</b><br/>
+      <span class="text-slate-400">${escapeHtml(o.override_reason || "(no reason)")}</span>
     </div>`).join("");
 }
 
 async function loadQueue() {
   const q = currentStatus ? `?status=${currentStatus}` : "";
-  const r = await fetch(`${API}/api/decisions${q}`);
-  const list = await r.json();
+  const list = await apiFetch(`/api/decisions${q}`);
   const el = document.getElementById("queue");
-  if (!list.length) { el.innerHTML = `<div class="empty">No decisions yet. Send a ticket:<br/><code>python scripts/simulate_ticket.py</code></div>`; return; }
+  if (!list.length) {
+    el.innerHTML = `<div class="text-center text-slate-500 border border-dashed border-border rounded-2xl py-12 text-sm">
+      No decisions yet. Run <code class="text-blue-300">python scripts/simulate_ticket.py</code></div>`;
+    return;
+  }
   el.innerHTML = list.map(renderCard).join("");
 }
 
 function renderCard(d) {
-  const conf = Math.round((d.confidence || 0) * 100);
-  const flags = (d.flags || []).map(f => `<span class="chip flag">${escapeHtml(f)}</span>`).join("");
-  const policies = (d.policy_matches || []).map(p => `<span class="chip">${escapeHtml(p)}</span>`).join("");
+  const conf = d.confidence || 0;
+  const band = confidenceBand(conf);
+  const pct = Math.round(conf * 100);
+  const flags = (d.flags || []).map(f => `<span class="text-[10px] px-2 py-0.5 rounded-full border border-amber-500/40 text-amber-400">${escapeHtml(f)}</span>`).join(" ");
+  const policies = (d.policy_matches || []).map(p => `<span class="text-[10px] px-2 py-0.5 rounded-full border border-border text-slate-400">${escapeHtml(p)}</span>`).join(" ");
   const allowed = (d.allowed_actions || []).map(a =>
-    `<span class="chip allow${a === d.recommended_action ? '' : ''}">${escapeHtml(ACTIONS_LABEL[a] || a)}</span>`).join("");
-  const amount = (d.amount_usd != null) ? ` ($${Number(d.amount_usd).toFixed(0)})` : "";
+    `<span class="text-[10px] px-2 py-0.5 rounded-full border border-blue-500/30 text-blue-300">${escapeHtml(ACTIONS_LABEL[a] || a)}</span>`).join(" ");
+  const amount = (d.amount_usd != null) ? ` · $${Number(d.amount_usd).toFixed(0)}` : "";
   const ctx = d.context_snapshot || {};
   const customer = ctx.name || d.customer_id;
-  const trail = (d.actions || []).map(a => `
-    <div class="line">• ${escapeHtml(a.agent_id || "agent")} <b>${escapeHtml(a.action_taken)}</b>
-      → ${escapeHtml(a.final_action || "")}${a.override_reason ? " — " + escapeHtml(a.override_reason) : ""}
-      <span style="opacity:.6">(${fmt(a.created_at)})</span></div>`).join("");
+  const trail = (d.actions || []).map(a =>
+    `<div class="text-xs text-slate-500">• ${escapeHtml(a.agent_id || "agent")} <b class="text-slate-300">${escapeHtml(a.action_taken)}</b> → ${escapeHtml(a.final_action || "")}${a.override_reason ? " — " + escapeHtml(a.override_reason) : ""}</div>`
+  ).join("");
 
   const actionButtons = d.status === "PENDING" ? `
-    <div class="actions">
-      <button class="green" onclick="act(${d.id}, 'APPROVE')">Approve recommendation</button>
-      <button class="amber" onclick="override(${d.id})">Override</button>
-      <button class="red" onclick="act(${d.id}, 'ESCALATE')">Escalate</button>
+    <div class="flex flex-wrap gap-2 mt-4">
+      <button onclick="act(${d.id}, 'APPROVE')" class="text-xs px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Approve</button>
+      <button onclick="openOverride(${d.id})" class="text-xs px-3 py-2 rounded-lg border border-amber-500 text-amber-400 hover:bg-amber-500/10">Override</button>
+      <button onclick="act(${d.id}, 'ESCALATE')" class="text-xs px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500/10">Escalate</button>
     </div>` : "";
 
+  const statusCls = { PENDING: "text-blue-300", APPROVED: "text-emerald-400", OVERRIDDEN: "text-amber-400", ESCALATED: "text-purple-400" }[d.status] || "";
+
   return `
-  <div class="card">
-    <div class="top">
+  <article class="bg-panel border border-border rounded-2xl p-5">
+    <div class="flex flex-wrap justify-between gap-3 mb-2">
       <div>
-        <div class="ticket-id">Ticket ${escapeHtml(d.ticket_id)} · ${escapeHtml(customer)} ·
-          <span class="status-tag s-${d.status}">${d.status}</span></div>
-        <div class="subject">${escapeHtml(ACTIONS_LABEL[d.recommended_action] || d.recommended_action)}${amount}
-          ${d.auto_executed ? '<span class="chip" style="color:var(--green)">auto-executed</span>' : ''}</div>
+        <div class="text-xs text-slate-500">Ticket ${escapeHtml(d.ticket_id)} · ${escapeHtml(customer)} · <span class="${statusCls} font-medium">${d.status}</span></div>
+        <h3 class="text-base font-semibold mt-0.5">${escapeHtml(ACTIONS_LABEL[d.recommended_action] || d.recommended_action)}${amount}</h3>
       </div>
-      <div class="action-badge a-${d.recommended_action}">${escapeHtml(d.recommended_action)}${amount}</div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs px-2.5 py-1 rounded-full border ${band.cls} font-semibold">${band.label} confidence</span>
+        <span class="text-xs text-slate-500">${pct}%</span>
+      </div>
     </div>
-    <div class="reason">${escapeHtml(d.reason || "")}</div>
-    ${d.policy_clamped ? `<div class="clamp"><b>Policy override</b> — the model proposed an action outside what policy allows; the engine clamped it. This is logged for compliance.</div>` : ""}
-    ${d.clarifying_question ? `<div class="clarify"><b>Suggested question:</b> ${escapeHtml(d.clarifying_question)}</div>` : ""}
-    <div class="conf-wrap">
-      <span class="conf-num">Confidence</span>
-      <div class="conf-bar"><div class="conf-fill" style="width:${conf}%"></div></div>
-      <span class="conf-num">${conf}%</span>
-    </div>
-    ${allowed ? `<div class="allow-row"><span class="lbl">Policy allowed</span>${allowed}</div>` : ""}
-    <div class="meta">${policies}${flags}<span class="chip">${escapeHtml(d.source || "")}</span></div>
+    <p class="text-sm text-slate-300 leading-relaxed">${escapeHtml(d.reason || "")}</p>
+    <p class="text-[11px] text-slate-500 mt-1">${band.hint}</p>
+    ${d.policy_clamped ? `<div class="mt-3 text-xs p-3 rounded-lg border conf-low"><b>Policy clamped</b> — model proposed an out-of-policy action; orchestrator enforced the allowed set.</div>` : ""}
+    ${d.clarifying_question ? `<div class="mt-3 text-xs p-3 rounded-lg border border-blue-500/30 bg-blue-500/5 text-blue-300"><b>Suggested question:</b> ${escapeHtml(d.clarifying_question)}</div>` : ""}
+    <div class="mt-3 h-1.5 bg-slate-800 rounded-full overflow-hidden max-w-xs"><div class="h-full bg-gradient-to-r from-blue-500 to-emerald-500" style="width:${pct}%"></div></div>
+    ${allowed ? `<div class="mt-3 flex flex-wrap gap-1 items-center"><span class="text-[10px] uppercase text-slate-500 mr-1">Allowed</span>${allowed}</div>` : ""}
+    <div class="mt-2 flex flex-wrap gap-1">${policies}${flags}</div>
     ${actionButtons}
-    ${trail ? `<div class="trail"><b>Audit trail</b>${trail}</div>` : ""}
-    <details class="context"><summary>Customer context snapshot</summary><pre>${escapeHtml(JSON.stringify(ctx, null, 2))}</pre></details>
-  </div>`;
+    ${trail ? `<div class="mt-4 pt-3 border-t border-border"><div class="text-[10px] uppercase text-slate-500 mb-1">Audit trail</div>${trail}</div>` : ""}
+    <details class="mt-3"><summary class="text-xs text-slate-500 cursor-pointer">Customer context</summary>
+      <pre class="mt-2 text-[11px] bg-slate-900 border border-border rounded-lg p-3 overflow-auto text-slate-400">${escapeHtml(JSON.stringify(ctx, null, 2))}</pre></details>
+  </article>`;
 }
 
 async function act(id, actionTaken, body) {
   const payload = body || { action_taken: actionTaken, agent_id: "demo-agent" };
-  await fetch(`${API}/api/decisions/${id}/action`, {
+  await apiFetch(`/api/decisions/${id}/action`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
@@ -250,37 +277,48 @@ async function act(id, actionTaken, body) {
   await refresh();
 }
 
-function override(id) {
-  const finalAction = prompt("Override — what action are you taking instead?\n(APPROVE_REFUND / DENY_REFUND / ESCALATE / RESPOND)", "DENY_REFUND");
-  if (finalAction === null) return;
-  const reason = prompt("Why are you overriding the engine? (captured for policy tuning)", "");
-  if (reason === null) return;
-  act(id, "OVERRIDE", { action_taken: "OVERRIDE", final_action: finalAction, override_reason: reason, agent_id: "demo-agent" });
+function openOverride(id) {
+  overrideDecisionId = id;
+  document.getElementById("ov-reason").value = "";
+  document.getElementById("override-modal").classList.remove("hidden");
 }
 
+document.getElementById("ov-cancel").addEventListener("click", () => {
+  document.getElementById("override-modal").classList.add("hidden");
+  overrideDecisionId = null;
+});
+
+document.getElementById("ov-submit").addEventListener("click", async () => {
+  if (!overrideDecisionId) return;
+  const finalAction = document.getElementById("ov-action").value;
+  const reason = document.getElementById("ov-reason").value.trim();
+  if (!reason) { alert("Please provide an override reason."); return; }
+  await act(overrideDecisionId, "OVERRIDE", {
+    action_taken: "OVERRIDE", final_action: finalAction, override_reason: reason, agent_id: "demo-agent"
+  });
+  document.getElementById("override-modal").classList.add("hidden");
+  overrideDecisionId = null;
+});
+
 async function refresh() {
-  await Promise.all([loadStats(), loadQueue()]);
+  try {
+    await Promise.all([loadStats(), loadQueue(), loadPolicyReport()]);
+  } catch (e) { if (e.message !== "unauthorized") console.error(e); }
 }
 
 function escapeHtml(s) {
-  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  }[c]));
-}
-function fmt(iso) {
-  if (!iso) return "";
-  try { return new Date(iso).toLocaleString(); } catch (e) { return iso; }
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
 document.querySelectorAll(".filter").forEach(b => b.addEventListener("click", () => {
-  document.querySelectorAll(".filter").forEach(x => x.classList.remove("active"));
-  b.classList.add("active");
+  document.querySelectorAll(".filter").forEach(x => x.classList.remove("border-blue-500", "text-blue-300"));
+  b.classList.add("border-blue-500", "text-blue-300");
   currentStatus = b.dataset.status;
   loadQueue();
 }));
 document.getElementById("refresh").addEventListener("click", refresh);
 
-refresh();
+initAuth().then(refresh);
 setInterval(refresh, 5000);
 </script>
 </body>

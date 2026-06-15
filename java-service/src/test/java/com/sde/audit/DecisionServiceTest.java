@@ -62,4 +62,15 @@ class DecisionServiceTest {
         assertTrue(stats.recentOverrides().stream()
                 .anyMatch(o -> "history of abuse".equals(o.overrideReason())));
     }
+
+    @Test
+    void policyTuningReportAggregatesOverrides() {
+        Decision saved = service.record(sample("APPROVE_REFUND"));
+        service.applyAction(saved.getId(),
+                new ActionRequest("OVERRIDE", "DENY_REFUND", "dana", "too generous")).orElseThrow();
+        var report = service.policyTuningReport();
+        assertTrue(report.totalOverrides() >= 1);
+        assertTrue(report.byRecommendedAction().stream()
+                .anyMatch(s -> "APPROVE_REFUND".equals(s.action())));
+    }
 }

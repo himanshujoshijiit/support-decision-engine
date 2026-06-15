@@ -37,6 +37,7 @@ class Ticket(BaseModel):
 
     ticket_id: str
     customer_id: str
+    requester_email: str = ""
     subject: str = ""
     body: str = ""
     source: str = "manual"  # zendesk | intercom | freshdesk | manual

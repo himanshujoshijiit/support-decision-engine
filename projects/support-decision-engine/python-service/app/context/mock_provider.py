@@ -73,9 +73,13 @@ _SEEDED: dict[str, CustomerContext] = {
 
 
 class MockContextProvider(ContextProvider):
-    def fetch(self, customer_id: str) -> CustomerContext:
+    def fetch(self, customer_id: str, email: str | None = None) -> CustomerContext:
         if customer_id in _SEEDED:
             return _SEEDED[customer_id].model_copy(deep=True)
+        if email:
+            for ctx in _SEEDED.values():
+                if ctx.email.lower() == email.lower():
+                    return ctx.model_copy(deep=True)
         return _synthesize(customer_id)
 
 

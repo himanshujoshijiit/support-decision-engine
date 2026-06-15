@@ -1,6 +1,7 @@
 package com.sde.audit.service;
 
 import com.sde.audit.dto.ActionRequest;
+import com.sde.audit.dto.PolicyTuningReport;
 import com.sde.audit.dto.StatsResponse;
 import com.sde.audit.model.AgentAction;
 import com.sde.audit.model.Decision;
@@ -9,8 +10,17 @@ import com.sde.audit.repo.DecisionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.temporal.IsoFields;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class DecisionService {
@@ -111,6 +121,89 @@ public class DecisionService {
 
         return new StatsResponse(total, pending, approved, overridden, escalated,
                 autoExecuted, round(overrideRate), round(agreementRate), recentOverrides);
+    }
+
+    /**
+     * Aggregates override patterns by recommended action and policy rule.
+     * Used by ops leads to tune rules that agents consistently disagree with.
+     */
+    @Transactional(readOnly = true)
+    public PolicyTuningReport policyTuningReport() {
+        List<Decision> all = repository.findAllByOrderByCreatedAtDesc();
+        long total = all.size();
+        List<Decision> overridden = all.stream()
+                .filter(d -> d.getStatus() == DecisionStatus.OVERRIDDEN)
+                .toList();
+        long overrideCount = overridden.size();
+        double overrideRate = total == 0 ? 0.0 : (double) overrideCount / total;
+
+        Map<String, long[]> byAction = new HashMap<>();
+        for (Decision d : all) {
+            String action = d.getRecommendedAction() == null ? "UNKNOWN" : d.getRecommendedAction();
+            long[] counts = byAction.computeIfAbsent(action, k -> new long[2]);
+            counts[0]++;
+            if (d.getStatus() == DecisionStatus.OVERRIDDEN) {
+                counts[1]++;
+            }
+        }
+
+        List<PolicyTuningReport.ActionOverrideStat> actionStats = byAction.entrySet().stream()
+                .map(e -> {
+                    long decisions = e.getValue()[0];
+                    long overrides = e.getValue()[1];
+                    double rate = decisions == 0 ? 0.0 : (double) overrides / decisions;
+                    return new PolicyTuningReport.ActionOverrideStat(
+                            e.getKey(), overrides, decisions, round(rate));
+                })
+                .sorted(Comparator.comparingLong(PolicyTuningReport.ActionOverrideStat::overrideCount).reversed())
+                .toList();
+
+        Map<String, long[]> byRule = new HashMap<>();
+        for (Decision d : all) {
+            List<String> rules = d.getPolicyMatches();
+            if (rules == null || rules.isEmpty()) {
+                rules = List.of("(no rule matched)");
+            }
+            for (String rule : rules) {
+                long[] counts = byRule.computeIfAbsent(rule, k -> new long[2]);
+                counts[0]++;
+                if (d.getStatus() == DecisionStatus.OVERRIDDEN) {
+                    counts[1]++;
+                }
+            }
+        }
+
+        List<PolicyTuningReport.RuleOverrideStat> ruleStats = byRule.entrySet().stream()
+                .map(e -> {
+                    long decisions = e.getValue()[0];
+                    long overrides = e.getValue()[1];
+                    double rate = decisions == 0 ? 0.0 : (double) overrides / decisions;
+                    return new PolicyTuningReport.RuleOverrideStat(
+                            e.getKey(), overrides, decisions, round(rate));
+                })
+                .sorted(Comparator.comparingLong(PolicyTuningReport.RuleOverrideStat::overrideCount).reversed())
+                .limit(15)
+                .toList();
+
+        Map<String, Long> weekly = new LinkedHashMap<>();
+        Instant cutoff = Instant.now().minusSeconds(7L * 24 * 3600);
+        for (Decision d : overridden) {
+            Instant at = d.getCreatedAt();
+            if (at == null || at.isBefore(cutoff)) {
+                continue;
+            }
+            var week = at.atZone(ZoneOffset.UTC).get(IsoFields.WEEK_BASED_YEAR)
+                    + "-W" + String.format("%02d", at.atZone(ZoneOffset.UTC).get(IsoFields.WEEK_OF_WEEK_BASED_YEAR));
+            weekly.merge(week, 1L, Long::sum);
+        }
+
+        List<PolicyTuningReport.WeeklyOverrideStat> weeklyStats = weekly.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> new PolicyTuningReport.WeeklyOverrideStat(e.getKey(), e.getValue()))
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        return new PolicyTuningReport(
+                round(overrideRate), total, overrideCount, actionStats, ruleStats, weeklyStats);
     }
 
     private static AgentAction lastAction(Decision d) {

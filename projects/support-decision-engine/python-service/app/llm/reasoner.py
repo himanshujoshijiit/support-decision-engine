@@ -22,6 +22,7 @@ from app.models import (
     RecommendedAction,
     Ticket,
 )
+from app.retry import with_retry
 
 _VALID_ACTIONS = {a.value for a in RecommendedAction}
 
@@ -88,8 +89,12 @@ class _LLMReasoner(Reasoner):
         self, ticket: Ticket, context: CustomerContext, policy: PolicyResult
     ) -> Decision:
         try:
-            raw = self._complete(
-                SYSTEM_PROMPT, build_user_prompt(ticket, context, policy)
+            raw = with_retry(
+                lambda: self._complete(SYSTEM_PROMPT, build_user_prompt(ticket, context, policy)),
+                attempts=2,
+                base_delay=0.75,
+                exceptions=(Exception,),
+                label=f"llm.{self._settings.llm_provider}",
             )
             data = _extract_json(raw)
             action = data.get("recommended_action")

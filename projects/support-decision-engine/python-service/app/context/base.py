@@ -14,7 +14,7 @@ class ContextProvider(ABC):
     """Fetches the billing + history context for a customer."""
 
     @abstractmethod
-    def fetch(self, customer_id: str) -> CustomerContext:
+    def fetch(self, customer_id: str, email: str | None = None) -> CustomerContext:
         """Return everything we know about a customer.
 
         Implementations should be resilient: on a partial/failed upstream lookup,

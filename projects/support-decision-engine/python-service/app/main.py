@@ -1,16 +1,19 @@
 """FastAPI app: webhook intake + a direct decision endpoint for demos/testing."""
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__, webhooks
+from app.audit_client import AuditClient
 from app.config import get_settings
 from app.models import Decision, Ticket
 from app.pipeline import get_pipeline
+from app.security import ApiKeyMiddleware, verify_zendesk_signature
 
 logging.basicConfig(level=logging.INFO)
 
@@ -26,11 +29,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(ApiKeyMiddleware)
 
 
 @app.get("/health")
 def health() -> dict[str, Any]:
     s = get_settings()
+    audit = AuditClient().health_check() if s.audit_enabled else {"status": "disabled"}
     return {
         "status": "ok",
         "version": __version__,
@@ -39,6 +44,9 @@ def health() -> dict[str, Any]:
         "context_provider": s.context_provider,
         "audit_url": s.audit_base_url,
         "audit_enabled": s.audit_enabled,
+        "audit_status": audit.get("status", "unknown"),
+        "auth_enabled": bool(s.engine_api_key),
+        "zendesk_signature_required": bool(s.zendesk_webhook_secret),
     }
 
 
@@ -50,7 +58,13 @@ def decide(ticket: Ticket, persist: bool = True) -> Decision:
 
 @app.post("/webhooks/zendesk", response_model=Decision)
 async def zendesk_webhook(request: Request) -> Decision:
-    payload = await request.json()
+    body = await request.body()
+    settings = get_settings()
+    verify_zendesk_signature(request.headers, body, settings.zendesk_webhook_secret or "")
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload") from exc
     ticket = webhooks.from_zendesk(payload)
     return get_pipeline().run(ticket)
 
