@@ -1,113 +1,106 @@
-# Support Decision Engine
+# Decision Intelligence Suite
 
-A **judgment layer** that sits between an incoming support ticket and the human/action
-that resolves it. It reads context, applies policy, and either acts or tells the agent
-*exactly what to do and why*.
+Four **decision intelligence** products for mid-size SaaS — same buyer (ops/product/finance), increasing ACV.
 
-> *"Your support team will never give a wrong refund, miss an SLA, or make an inconsistent call again."*
+| # | Product | Folder | Port | Status | ACV |
+|---|---------|--------|------|--------|-----|
+| 1 | **Support Decision Engine** | [`projects/support-decision-engine/`](projects/support-decision-engine/) + [`java-service/`](java-service/) | 8000 + 8080 | Live MVP | $500–1,500/mo |
+| 2 | **Churn Causality Engine** | [`projects/churn-causality-engine/`](projects/churn-causality-engine/) | 8001 | MVP | $800–3,000/mo |
+| 3 | **Internal Knowledge Search** | [`projects/knowledge-search/`](projects/knowledge-search/) | 8002 | MVP | $300–800/mo per team |
+| 4 | **Cost Drift Detector** | [`projects/cost-drift-detector/`](projects/cost-drift-detector/) | 8003 | MVP | CFO-led |
 
-This is **not** a chatbot and **not** another helpdesk. It is a decision + audit system.
-
----
-
-## Architecture
-
-Two services, split by responsibility:
-
-| Service | Language | Responsibility |
-|---|---|---|
-| `python-service` | Python (FastAPI) | The **AI judgment layer**: webhook intake → customer-context fetch → policy rules engine → LLM reasoning → **orchestrator (policy caps the LLM action)** → emit a `Decision` |
-| `java-service` | Java (Spring Boot) | The **enterprise audit + decision store**: persists every decision, serves the agent dashboard, records human actions (approve / override / escalate) and override reasons (the feedback loop) |
-
-### The principle this rests on
-
-```
-Hard rules (policy) → Soft reasoning (LLM) → Human decision → Audit
-```
-
-The policy engine runs **first** and emits the set of `allowed_actions`. The LLM may only
-recommend an action from that set — the **Decision Orchestrator**
-(`python-service/app/orchestrator.py`) clamps anything out of policy and caps refund
-amounts in code. A hallucinating or jailbroken model cannot issue a refund your policy
-forbids. That's the trust story; see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-
-```
-                    ┌──────────────────────────────────────────────┐
- Zendesk / Intercom │                PYTHON SERVICE                  │
- webhook ──────────►│  intake → context → policy engine → LLM layer  │
-                    │            produces a Decision                 │
-                    └───────────────────────┬────────────────────────┘
-                                             │ POST /api/decisions
-                                             ▼
-                    ┌──────────────────────────────────────────────┐
-                    │                 JAVA SERVICE                   │
-   Agent dashboard ◄┤  stores decisions • audit log • agent actions  │
-   (approve/        │  approve / override (+reason) / escalate        │
-    override)       └────────────────────────────────────────────────┘
-```
-
-Why this split? The Python side is where the AI "wow moment" lives and where Python's
-LLM/ML ecosystem shines. The Java side is the durable, traceable system of record that
-CFOs and ops heads trust — full audit trail of *what was recommended, what the human did,
-and why*.
+**One customer on all three upsells ≈ $2,000–5,000/month.** Close 10 companies → ₹1–3 Cr/year.
 
 ---
 
-## Quick start
+## Honest priority order
 
-You need **two terminals**.
+1. **Get 1 pilot** on Support Decision Engine ← do this before building anything new
+2. Record a demo video and post on LinkedIn
+3. **Churn Causality Engine** once you have customer feedback (natural upsell)
+4. Package as **Decision Suite** for mid-size SaaS
 
-### 1. Java audit + dashboard service
+---
 
-```bash
+## Run everything (requires Python 3.10+)
+
+**Terminal 1 — Support (Java dashboard)**
+
+```powershell
 cd java-service
 mvn spring-boot:run
 ```
 
-- Dashboard: http://localhost:8080/
-- API:       http://localhost:8080/api/decisions
+**Terminal 2 — Support (Python engine)**
 
-### 2. Python decision engine (requires Python 3.10+)
-
-```bash
-cd python-service
+```powershell
+cd projects/support-decision-engine/python-service
 python -m venv .venv
-# Windows:  .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
-```
-
-- API + docs: http://localhost:8000/docs
-
-### 3. Send a sample ticket (the demo)
-
-```bash
-cd python-service
 python scripts/simulate_ticket.py
 ```
 
-Watch it appear in the dashboard at http://localhost:8080/ with an AI recommendation,
-a confidence score, and a plain-English reason. Click **Approve** / **Override** / **Escalate**
-and see it logged in the audit trail.
+Dashboard: http://localhost:8080/
+
+**Terminal 3+ — New products (each in its own venv or shared)**
+
+```powershell
+# Churn
+cd projects/churn-causality-engine
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8001
+
+# Knowledge Search
+cd projects/knowledge-search
+uvicorn app.main:app --reload --port 8002
+
+# Cost Drift
+cd projects/cost-drift-detector
+uvicorn app.main:app --reload --port 8003
+```
+
+| Product | URL |
+|---------|-----|
+| Support dashboard | http://localhost:8080/ |
+| Churn dashboard | http://localhost:8001/ |
+| Knowledge Search | http://localhost:8002/ |
+| Cost Drift | http://localhost:8003/ |
 
 ---
 
-## What's intentionally NOT built (per the MVP plan)
+## Portfolio strategy
 
-Mobile app, complex settings UI, multi-language, self-serve signup. None of that belongs
-in the MVP. Integrations (Stripe, Zendesk) are **mocked** behind clean interfaces so the
-whole thing runs end-to-end with zero external accounts or API keys — swap in the real
-provider when a pilot customer is ready.
+```
+Support Decision Engine  →  first entry point   ($500–1,500/mo)
+         +
+Churn Causality Engine   →  upsell              ($800–3,000/mo)
+         +
+Knowledge Search         →  expansion           ($300–800/mo)
+         +
+Cost Drift Detector      →  finance expansion   (custom)
+```
+
+---
 
 ## Documentation
 
-| Doc | What's in it |
-|---|---|
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System + sequence diagrams, the full pipeline, data model, policy config, prompt skeleton, stack |
-| [`docs/PLAYBOOK.md`](docs/PLAYBOOK.md) | Founder GTM: positioning, pricing, the moat, 30-day plan, success metrics |
-| [`docs/OUTREACH.md`](docs/OUTREACH.md) | Warm / cold / post-demo / referral / CFO message templates |
-| [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Word-for-word 15-minute demo + objection handlers |
-| [`docs/SECURITY.md`](docs/SECURITY.md) | Data-flow + compliance one-pager for ops/finance |
-| [`docs/PILOT_AGREEMENT.md`](docs/PILOT_AGREEMENT.md) | 1-page pilot/LOI skeleton + success criteria |
-| [`docs/INTEGRATION_CHECKLIST.md`](docs/INTEGRATION_CHECKLIST.md) | Zendesk + Stripe scopes, webhooks, test tickets, go-live gate |
+Open **[docs/index.html](docs/index.html)** in a browser for the full HTML docs (architecture, outreach, demo script, security, integration, **getting started**).
+
+Markdown docs: [`docs/PORTFOLIO.md`](docs/PORTFOLIO.md) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/PLAYBOOK.md`](docs/PLAYBOOK.md)
+
+---
+
+## Repo layout
+
+```
+decision-intelligence-suite/   (this repo)
+├── java-service/              Support audit store + agent dashboard
+├── projects/
+│   ├── support-decision-engine/python-service/
+│   ├── churn-causality-engine/
+│   ├── knowledge-search/
+│   └── cost-drift-detector/
+└── docs/                      Shared GTM + architecture docs
+```

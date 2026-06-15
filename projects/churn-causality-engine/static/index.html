@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Churn Causality Engine</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#0f1115;color:#e6e9ef;margin:0;padding:24px}
+  h1{font-size:20px} .grid{display:grid;gap:14px;max-width:900px}
+  .card{background:#171a21;border:1px solid #2a2f3a;border-radius:12px;padding:16px}
+  .risk{font-weight:700;text-transform:uppercase;font-size:12px;padding:4px 10px;border-radius:999px;display:inline-block}
+  .critical{background:rgba(229,72,77,.2);color:#e5484d}
+  .high{background:rgba(245,166,35,.2);color:#f5a623}
+  .medium{background:rgba(91,141,239,.2);color:#5b8def}
+  .low{background:rgba(46,204,113,.2);color:#2ecc71}
+  button{background:#5b8def;border:none;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer}
+  input{padding:8px 12px;border-radius:8px;border:1px solid #2a2f3a;background:#1f232c;color:#fff;width:220px}
+  .cause{font-size:13px;color:#cdd3df;margin:8px 0}
+</style>
+</head>
+<body>
+<h1>Churn Causality Engine</h1>
+<p style="color:#98a2b3">Analyze a customer: friction → churn risk → root causes</p>
+<div style="margin:16px 0">
+  <input id="cid" value="cus_at_risk_01" placeholder="customer_id"/>
+  <button onclick="run()">Analyze</button>
+</div>
+<div id="out" class="grid"></div>
+<script>
+async function run(){
+  const id=document.getElementById('cid').value.trim();
+  const r=await fetch('/analyze/'+encodeURIComponent(id));
+  const d=await r.json();
+  document.getElementById('out').innerHTML=`
+    <div class="card">
+      <span class="risk ${d.risk_level}">${d.risk_level}</span>
+      <span style="margin-left:8px">Score ${(d.churn_risk_score*100).toFixed(0)}%</span>
+      <div style="margin-top:8px">${d.plan} · $${d.mrr_usd}/mo · ${d.tenure_days}d tenure</div>
+    </div>
+    ${(d.root_causes||[]).map(c=>`<div class="card"><b>${c.title}</b> (${(c.confidence*100).toFixed(0)}%)<div class="cause">${c.explanation}</div><div class="cause"><i>→ ${c.recommended_action}</i></div></div>`).join('')}
+  `;
+}
+run();
+</script>
+</body>
+</html>

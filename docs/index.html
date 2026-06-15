@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Support Decision Engine — Docs</title>
+<title>Decision Intelligence Suite — Docs</title>
 <style>
   :root{
     --bg:#0f1115; --panel:#171a21; --panel-2:#1f232c; --border:#2a2f3a;
@@ -30,7 +30,8 @@
   }
   nav a:hover{background:var(--panel-2);}
   nav a.active{background:rgba(91,141,239,.14); border-color:rgba(91,141,239,.4); color:#cfe0ff;}
-  nav a .n{display:block; font-size:11px; color:var(--muted); margin-top:1px;}
+  nav .nav-group{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 6px 8px;font-weight:600}
+  nav .nav-group:first-child{margin-top:0}
   nav .tools{margin-top:18px; border-top:1px solid var(--border); padding-top:14px;}
   nav button{
     width:100%; font:inherit; cursor:pointer; border-radius:8px; border:1px solid var(--border);
@@ -90,7 +91,7 @@
 </head>
 <body>
 <nav>
-  <h1>Support Decision Engine</h1>
+  <h1>Decision Intelligence Suite</h1>
   <div class="sub">Documentation</div>
   <div id="navlinks"></div>
   <div class="tools">
@@ -101,106 +102,213 @@
 
 <!-- ===================== EMBEDDED DOCS (Markdown) ===================== -->
 <script type="text/markdown" id="md-run">
-# Getting Started — Run the App
+# Getting Started — Run the Suite
 
-The app is **two services**: the Java audit store + dashboard, and the Python decision
-engine. You run them in **two terminals** (PowerShell on Windows). It works fully offline
-— no API keys or external accounts needed.
+**Repo:** clone from [github.com/himanshujoshijiit/support-decision-engine](https://github.com/himanshujoshijiit/support-decision-engine)
+
+Four products, four ports. **Support** = Java + Python. **Churn, Knowledge, Cost** = Python only.
+
+> **Prerequisite:** Python 3.10+ and (for Support) Java 17 + Maven. No API keys — all mock data.
 
 ---
 
-## Step 0 — Install Python (one time)
-
-If `python --version` doesn't work, install real Python (3.10+):
-
-- Easiest: `winget install Python.Python.3.12`
-- Or download from python.org and **check "Add Python to PATH"** during install.
-
-Then **close and reopen PowerShell** and verify:
+## Step 0 — One-time setup
 
 ```powershell
+# Python (if missing)
+winget install Python.Python.3.12
+# Close and reopen PowerShell, then:
 python --version
+
+# Java + Maven (Support dashboard only)
+mvn -version
 ```
 
-> Java + Maven (JDK 17) are already required for the Java service. Check with `mvn -version`.
+If `Activate.ps1` is blocked:
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+**Port conflict?** If 8080 is taken, run Java on another port:
+```powershell
+mvn spring-boot:run "-Dspring-boot.run.arguments=--server.port=8090"
+```
+Then set `$env:AUDIT_BASE_URL="http://localhost:8090"` before starting the Python engine.
 
 ---
 
-## Terminal 1 — Java audit store + dashboard
+## Product 1 — Support Decision Engine
 
+**Ports:** 8080 (dashboard) + 8000 (engine) · **Folder:** `java-service/` + `projects/support-decision-engine/python-service/`
+
+### Run — step by step
+
+**Terminal 1 — Java audit store + agent dashboard**
 ```powershell
-cd c:\Users\Himanshu7.Joshi\support-decision-engine\java-service
+cd java-service
 mvn spring-boot:run
 ```
+Wait for `Started AuditApplication`. Open http://localhost:8080/
 
-Leave it running. It serves:
-- **Dashboard:** http://localhost:8080/
-- API: http://localhost:8080/api/decisions
-
----
-
-## Terminal 2 — Python decision engine
-
+**Terminal 2 — Python judgment engine**
 ```powershell
-cd c:\Users\Himanshu7.Joshi\support-decision-engine\python-service
+cd projects/support-decision-engine/python-service
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Leave it running too. It serves:
-- API + interactive docs: http://localhost:8000/docs
-- Health check: http://localhost:8000/health
-
-> If `Activate.ps1` is blocked, run once:
-> `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` then re-run the activate line.
-
-> **No `.env` or API keys needed** — it defaults to the offline heuristic reasoner + mock
-> customer data, so the whole thing runs with zero external accounts.
-
----
-
-## Step 3 — Fire the demo tickets
-
-In a third terminal (or reuse Terminal 2 with the venv active):
-
+**Terminal 3 — Fire demo tickets**
 ```powershell
-cd c:\Users\Himanshu7.Joshi\support-decision-engine\python-service
+cd projects/support-decision-engine/python-service
+.venv\Scripts\Activate.ps1
 python scripts\simulate_ticket.py
 ```
+Refresh the dashboard — 5 tickets appear. Click **Approve / Override / Escalate**.
 
-This sends 5 scenarios. Open **http://localhost:8080/** and you'll see the decisions
-appear with the recommended action, confidence, the "Policy allowed" actions, and reasons.
-Click **Approve / Override / Escalate** and watch the audit trail + stats update.
+### Verify
+| Check | URL |
+|-------|-----|
+| Dashboard | http://localhost:8080/ |
+| Engine API docs | http://localhost:8000/docs |
+| Health | http://localhost:8000/health |
+
+### Tests
+```powershell
+cd projects/support-decision-engine/python-service && pytest
+cd java-service && mvn test
+```
+
+Details: [Support Decision Engine](#support-product)
 
 ---
 
-## (Optional) Run the test suites
+## Product 2 — Churn Causality Engine
+
+**Port:** 8001 · **Folder:** `projects/churn-causality-engine/`
 
 ```powershell
-# Python - from python-service with the venv active
-pytest
-
-# Java - from java-service
-mvn test
+cd projects/churn-causality-engine
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8001
 ```
+
+**Demo script (optional third terminal):**
+```powershell
+python scripts\simulate_churn.py
+```
+
+| Check | URL |
+|-------|-----|
+| Dashboard | http://localhost:8001/ |
+| Analyze customer | http://localhost:8001/analyze/cus_at_risk_01 |
+| API docs | http://localhost:8001/docs |
+
+Try customer IDs: `cus_at_risk_01`, `cus_healthy_02`, `cus_slipping_03`
+
+Details: [Churn Causality Engine](#churn-product)
+
+---
+
+## Product 3 — Internal Knowledge Search
+
+**Port:** 8002 · **Folder:** `projects/knowledge-search/`
+
+```powershell
+cd projects/knowledge-search
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8002
+```
+
+Open http://localhost:8002/ and ask:
+- *"What is our refund policy?"*
+- *"Stripe webhook duplicate charges"*
+- *"churn save playbook"*
+
+**API:**
+```powershell
+curl -X POST http://localhost:8002/ask -H "Content-Type: application/json" -d "{\"question\":\"refund policy annual plans\"}"
+```
+
+Details: [Knowledge Search](#knowledge-product)
+
+---
+
+## Product 4 — Cost Drift Detector
+
+**Port:** 8003 · **Folder:** `projects/cost-drift-detector/`
+
+```powershell
+cd projects/cost-drift-detector
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8003
+```
+
+Open http://localhost:8003/ → click **Run scan**
+
+| Check | URL |
+|-------|-----|
+| Dashboard | http://localhost:8003/ |
+| Scan API | http://localhost:8003/scan |
+
+Details: [Cost Drift Detector](#cost-product)
+
+---
+
+## Run all four at once (cheat sheet)
+
+Open **5 terminals** (1 Java + 4 Python venvs):
+
+| Terminal | Command | Port |
+|----------|---------|------|
+| 1 | `cd java-service && mvn spring-boot:run` | 8080 |
+| 2 | `cd projects/support-decision-engine/python-service && uvicorn app.main:app --port 8000` | 8000 |
+| 3 | `cd projects/churn-causality-engine && uvicorn app.main:app --port 8001` | 8001 |
+| 4 | `cd projects/knowledge-search && uvicorn app.main:app --port 8002` | 8002 |
+| 5 | `cd projects/cost-drift-detector && uvicorn app.main:app --port 8003` | 8003 |
 
 ---
 
 ## Quick reference
 
-| Service | Start command | URL |
-|---|---|---|
-| Java (dashboard + audit) | `mvn spring-boot:run` | http://localhost:8080/ |
-| Python (engine) | `uvicorn app.main:app --reload --port 8000` | http://localhost:8000/docs |
-| Demo driver | `python scripts\simulate_ticket.py` | appears in dashboard |
+| Product | Port | URL |
+|---------|------|-----|
+| Support dashboard | 8080 | http://localhost:8080/ |
+| Support engine | 8000 | http://localhost:8000/docs |
+| Churn | 8001 | http://localhost:8001/ |
+| Knowledge | 8002 | http://localhost:8002/ |
+| Cost Drift | 8003 | http://localhost:8003/ |
 
-Start the **Java service first** so the Python engine has somewhere to send decisions
-(it still works if Java is down — it just logs a warning).
+See [Completion Status](#status) for what's built vs planned.
+</script>
 
-See [INTEGRATION_CHECKLIST.md](INTEGRATION_CHECKLIST.md) to switch from mock to real
-Zendesk + Stripe, and the [Architecture](ARCHITECTURE.md) for how the pipeline fits together.
+<script type="text/markdown" id="md-portfolio">
+# Decision Intelligence Suite — Portfolio
+
+Four products, one buyer, increasing ACV.
+
+| # | Product | Port | ACV |
+|---|---------|------|-----|
+| 1 | Support Decision Engine | 8000 + 8080 | $500–1,500/mo |
+| 2 | Churn Causality Engine | 8001 | $800–3,000/mo |
+| 3 | Internal Knowledge Search | 8002 | $300–800/mo |
+| 4 | Cost Drift Detector | 8003 | CFO-led |
+
+**Suite ACV:** $2,000–5,000/month per customer.
+
+## Priority order
+
+1. **1 pilot** on Support Decision Engine
+2. LinkedIn demo video
+3. Harden Churn from feedback
+4. Package as Decision Suite
 </script>
 
 <script type="text/markdown" id="md-playbook">
@@ -1072,23 +1180,518 @@ spring.jpa.hibernate.ddl-auto=update
 - [ ] Audit export tested (hand it to the finance contact).
 - [ ] Success metrics dashboard (`GET /api/stats`) reviewed with the ops lead.
 </script>
+
+<script type="text/markdown" id="md-status">
+# Completion Status — What's Done vs Planned
+
+Honest scorecard. **MVP demo-ready** = runs offline with mock data. **Production** = real integrations, auth, multi-tenant.
+
+---
+
+## Summary
+
+| Product | MVP code | UI | Tests | Real integrations | Production-ready |
+|---------|----------|-----|-------|-------------------|------------------|
+| Support Decision Engine | **Done** | **Done** | **Done** | Stubbed (Zendesk/Stripe/LLM) | Pilot-ready with setup |
+| Churn Causality Engine | **Done** | **Done** | Partial | Mock analytics only | Demo-ready |
+| Knowledge Search | **Done** | **Done** | Partial | Mock corpus only | Demo-ready |
+| Cost Drift Detector | **Done** | **Done** | Partial | Mock AWS billing only | Demo-ready |
+
+**Bottom line:** All four products have **runnable MVP code** with dashboards and APIs. Support is the most complete (Java audit store, orchestrator, policy engine). The three upsells are **demo scaffolds** — enough to pitch the suite, not enough for paying customers without integration work.
+
+---
+
+## Support Decision Engine
+
+### Done
+- Python pipeline: webhook → context → policy → LLM/heuristic → **orchestrator** → decision
+- Policy `allowed_actions` trust boundary + refund amount capping
+- Java audit store + agent dashboard (approve/override/escalate + stats)
+- Zendesk/Intercom webhook adapters (payload normalization)
+- Mock customer context + Stripe provider skeleton
+- Demo script (`simulate_ticket.py`), policy unit tests, orchestrator tests
+- GTM docs: outreach, demo script, security, pilot agreement
+
+### Not done (intentional for MVP)
+- Real Stripe field mapping in production
+- Webhook signature verification
+- Auth / multi-tenant
+- Zendesk sidebar embed (uses standalone dashboard)
+- Live LLM required (heuristic works offline)
+
+---
+
+## Churn Causality Engine
+
+### Done
+- Mock Mixpanel/Amplitude events + billing profile
+- Journey friction detection (drop-off vs cohort benchmarks)
+- Churn risk scoring + behavioral signals
+- Plain-English root causes + recommended actions
+- Dashboard + `GET/POST /analyze` API + demo script
+
+### Not done
+- Real Mixpanel/Amplitude/Stripe connectors
+- Cohort-level batch analysis
+- LLM-enhanced narratives
+- Persistence / alerting
+
+---
+
+## Knowledge Search
+
+### Done
+- Mock Notion + Slack + Drive corpus (5 docs)
+- Keyword search + ranked hits
+- `/ask` endpoint with citations + confidence
+- Simple search UI
+
+### Not done
+- Real OAuth connectors (Notion, Slack, Google Drive)
+- Vector / semantic search
+- LLM answer synthesis
+- Access control per team
+
+---
+
+## Cost Drift Detector
+
+### Done
+- Mock AWS cost line items (EC2, RDS, NAT, CloudWatch, etc.)
+- Baseline vs current drift scan with severity
+- Likely cause + recommended action per finding
+- Dashboard + `/scan` API
+
+### Not done
+- Real AWS Cost Explorer / CUR ingestion
+- Budget alerts, Slack/email notifications
+- Tag-based attribution
+- Historical trending
+
+---
+
+## Recommended next step
+
+**Get 1 pilot on Support Decision Engine.** Use Churn/Knowledge/Cost in the pitch as "Decision Suite roadmap" or live demos on mock data.
+</script>
+
+<script type="text/markdown" id="md-support-product">
+# Product 1 — Support Decision Engine
+
+**Judgment layer for support tickets** — not a chatbot. Policy runs first, LLM explains, human decides, everything is audited.
+
+| | |
+|---|---|
+| **Ports** | 8080 (Java dashboard) + 8000 (Python engine) |
+| **Folder** | `java-service/` + `projects/support-decision-engine/python-service/` |
+| **ACV target** | $500–1,500/mo |
+| **Buyer** | Head of Support, COO |
+
+---
+
+## Features
+
+- **Webhook intake** — Zendesk + Intercom payloads normalized to a canonical `Ticket`
+- **Customer context** — LTV, tenure, refund history, fraud risk, subscription (mock or Stripe)
+- **Policy engine** — JSON rules in `config/policies.json`; emits `allowed_actions` + refund ceiling
+- **LLM reasoning** — plain-English recommendation (heuristic offline, OpenAI/Anthropic optional)
+- **Decision orchestrator** — hard-clamps any out-of-policy model action (`policy_clamped`)
+- **Agent dashboard** — queue, confidence, policy chips, approve/override/escalate
+- **Audit trail** — immutable log of recommendation + human action + override reason
+- **Feedback loop** — `/api/stats` override rate feeds policy tuning
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Sources
+        Z[Zendesk / Intercom]
+        S[Stripe billing]
+    end
+    subgraph Python["Python engine :8000"]
+        WH[Webhooks]
+        CTX[Context]
+        POL[Policy engine]
+        LLM[LLM / heuristic]
+        ORCH[Orchestrator]
+    end
+    subgraph Java["Java store :8080"]
+        API[REST API]
+        DB[(H2 / Postgres)]
+        UI[Agent dashboard]
+    end
+    Z --> WH --> CTX
+    S --> CTX
+    CTX --> POL --> ORCH
+    CTX --> LLM --> ORCH
+    ORCH -->|POST /api/decisions| API --> DB
+    API --> UI
+    UI -->|approve / override| API
+```
+
+**Core principle:**
+```
+Hard rules (policy) -> Soft reasoning (LLM) -> Human decision -> Audit
+```
+
+---
+
+## Pipeline stages
+
+| Stage | Code | Output |
+|-------|------|--------|
+| Intake | `app/webhooks.py` | `Ticket` |
+| Context | `app/context/` | `CustomerContext` |
+| Policy | `app/policy/engine.py` | `allowed_actions[]`, flags |
+| Reasoning | `app/llm/` | proposed action + reason |
+| Orchestrator | `app/orchestrator.py` | clamped `Decision` |
+| Audit | `java-service/` | persisted + human actions |
+
+---
+
+## API endpoints
+
+### Python (:8000)
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/health` | Service status |
+| POST | `/decide` | Score a ticket manually |
+| POST | `/webhooks/zendesk` | Zendesk webhook |
+| POST | `/webhooks/intercom` | Intercom webhook |
+| POST | `/admin/reload-policies` | Hot-reload rules |
+
+### Java (:8080)
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/` | Agent dashboard |
+| POST | `/api/decisions` | Ingest decision |
+| GET | `/api/decisions` | List queue |
+| POST | `/api/decisions/{id}/action` | Approve / override / escalate |
+| GET | `/api/stats` | Override rate, agreement rate |
+
+---
+
+## How to run
+
+```powershell
+# Terminal 1
+cd java-service && mvn spring-boot:run
+
+# Terminal 2
+cd projects/support-decision-engine/python-service
+python -m venv .venv && .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+
+# Terminal 3 — demo
+python scripts\simulate_ticket.py
+```
+
+**Dashboard:** http://localhost:8080/
+
+See also: [Architecture](#architecture) · [Integration Checklist](#integration) · [Demo Script](#demo)
+</script>
+
+<script type="text/markdown" id="md-churn-product">
+# Product 2 — Churn Causality Engine
+
+**Why customers leave** — connects product analytics + billing to plain-English root causes.
+
+| | |
+|---|---|
+| **Port** | 8001 |
+| **Folder** | `projects/churn-causality-engine/` |
+| **ACV target** | $800–3,000/mo |
+| **Buyer** | Head of Product, VP Ops |
+| **Upsell from** | Support Decision Engine customers |
+
+---
+
+## Features
+
+- **Event ingestion** — mock Mixpanel/Amplitude journey events per customer
+- **Friction detection** — identifies where customers stall vs cohort drop-off rates
+- **Behavioral signals** — failed payment, support spike, login decline, low adoption
+- **Churn risk score** — 0–1 with risk level (low / medium / high / critical)
+- **Root cause narratives** — title, explanation, confidence, recommended action
+- **Dashboard** — analyze any customer ID live
+- **Demo customers** — `cus_at_risk_01`, `cus_healthy_02`, `cus_slipping_03`
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Sources
+        MP[Mixpanel / Amplitude]
+        ST[Stripe billing]
+    end
+    subgraph Engine["Churn engine :8001"]
+        ING[Ingest mock provider]
+        FR[Friction detector]
+        SC[Churn scorer]
+        EX[Root cause explainer]
+    end
+    ING --> FR --> SC --> EX
+    MP -.-> ING
+    ST -.-> ING
+    EX --> UI[Dashboard + API]
+```
+
+---
+
+## Pipeline
+
+```
+analytics events + billing  ->  friction points  ->  churn score  ->  root causes
+```
+
+| Stage | Code | What it does |
+|-------|------|--------------|
+| Ingest | `app/ingest/mock_provider.py` | Customer profile + events |
+| Friction | `app/analyze/friction.py` | Journey stall + engagement signals |
+| Score | `app/analyze/churn_scorer.py` | Weighted risk score |
+| Explain | `app/explain/root_cause.py` | Plain-English causes + actions |
+| Orchestrate | `app/pipeline.py` | Wires stages |
+
+Config: `config/signals.json` — journey steps, weights, thresholds.
+
+---
+
+## API endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/health` | Status |
+| GET | `/analyze/{customer_id}` | Full churn analysis |
+| POST | `/analyze` | Body: `{"customer_id": "..."}` |
+| GET | `/` | Dashboard UI |
+| GET | `/docs` | OpenAPI |
+
+---
+
+## How to run
+
+```powershell
+cd projects/churn-causality-engine
+python -m venv .venv && .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8001
+python scripts\simulate_churn.py
+```
+
+**Try in browser:** http://localhost:8001/analyze/cus_at_risk_01
+
+**Tests:** `pytest`
+</script>
+
+<script type="text/markdown" id="md-knowledge-product">
+# Product 3 — Internal Knowledge Search
+
+**Ask a question, get an answer with citations** — across Notion, Slack, and Google Drive.
+
+| | |
+|---|---|
+| **Port** | 8002 |
+| **Folder** | `projects/knowledge-search/` |
+| **ACV target** | $300–800/mo per team |
+| **Buyer** | Ops lead, support manager |
+
+---
+
+## Features
+
+- **Unified mock corpus** — 5 docs from Notion + Slack + Drive
+- **Keyword search** — ranked hits with snippets
+- **Ask endpoint** — synthesizes answer from top hits + citations
+- **Confidence score** — based on hit quality
+- **Search UI** — type a question, see answer + sources
+- **Zero setup** — no OAuth, no API keys for demo
+
+### Sample questions to try
+- *What is our refund policy?*
+- *duplicate charges Stripe webhook*
+- *churn save playbook*
+- *enterprise MSA SLA*
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Sources
+        N[Notion]
+        SL[Slack]
+        D[Google Drive]
+    end
+    subgraph Engine["Knowledge Search :8002"]
+        IDX[Mock index]
+        SR[Search engine]
+        ASK[Answer synthesizer]
+    end
+    N -.-> IDX
+    SL -.-> IDX
+    D -.-> IDX
+    IDX --> SR --> ASK
+    ASK --> UI[Web UI]
+```
+
+---
+
+## Pipeline
+
+```
+question  ->  tokenize + search corpus  ->  rank hits  ->  answer + citations
+```
+
+| Stage | Code | What it does |
+|-------|------|--------------|
+| Corpus | `app/sources/mock_index.py` | Seeded documents |
+| Search | `app/search/engine.py` | Keyword match + snippet |
+| Answer | `app/ask/answerer.py` | Heuristic synthesis |
+
+---
+
+## API endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/health` | Status |
+| GET | `/search?q=...&top_k=5` | Raw search hits |
+| POST | `/ask` | `{"question": "...", "top_k": 3}` |
+| GET | `/` | Search UI |
+
+---
+
+## How to run
+
+```powershell
+cd projects/knowledge-search
+python -m venv .venv && .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8002
+```
+
+Open http://localhost:8002/ and ask a question.
+
+**Tests:** `pytest`
+</script>
+
+<script type="text/markdown" id="md-cost-product">
+# Product 4 — Cost Drift Detector
+
+**Silent AWS spend creep** — baseline vs current, ranked findings with dollar impact.
+
+| | |
+|---|---|
+| **Port** | 8003 |
+| **Folder** | `projects/cost-drift-detector/` |
+| **ACV target** | $500–2,000/mo (CFO-led) |
+| **Buyer** | CFO, Head of Engineering |
+
+---
+
+## Features
+
+- **Mock AWS billing** — EC2, RDS, S3, Lambda, CloudWatch, NAT Gateway, EKS
+- **Drift scan** — compares current month vs baseline per service
+- **Severity ranking** — warning (15%+ drift) vs critical (35%+)
+- **Likely cause** — plain-English explanation per service
+- **Recommended action** — concrete fix (VPC endpoints, log retention, staging shutdown)
+- **Dashboard** — one-click scan with total delta $
+
+### Demo findings (built-in mock data)
+- NAT Gateway +110% — cross-AZ traffic spike
+- CloudWatch +89% — debug logging left on in prod
+- Staging EC2 +112% — instances running 24/7
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Sources
+        AWS[AWS Cost Explorer / CUR]
+    end
+    subgraph Engine["Cost Drift :8003"]
+        BILL[Mock billing data]
+        DR[Drift engine]
+        FIND[Findings ranked by $]
+    end
+    AWS -.-> BILL --> DR --> FIND --> UI[Dashboard]
+```
+
+---
+
+## Pipeline
+
+```
+current costs + baseline  ->  per-service delta %  ->  severity  ->  cause + fix
+```
+
+| Stage | Code | What it does |
+|-------|------|--------------|
+| Billing | `app/billing/mock_aws.py` | Line items with baseline + current |
+| Detect | `app/detect/drift_engine.py` | Threshold scan + recommendations |
+
+Thresholds: **warning** at 15% increase, **critical** at 35%.
+
+---
+
+## API endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/health` | Status |
+| GET | `/scan` | Run drift scan |
+| POST | `/scan` | Same |
+| GET | `/` | Dashboard UI |
+
+---
+
+## How to run
+
+```powershell
+cd projects/cost-drift-detector
+python -m venv .venv && .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8003
+```
+
+Open http://localhost:8003/ → **Run scan**
+
+**Tests:** `pytest`
+</script>
+
 <!-- =================== END EMBEDDED DOCS =================== -->
 
 <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
 <script>
 const DOCS = [
-  {id:"run",         file:"RUN.md",                  title:"Getting Started",        note:"How to run the app"},
-  {id:"playbook",    file:"PLAYBOOK.md",             title:"Founder Playbook",       note:"GTM, pricing, 30-day plan"},
-  {id:"architecture",file:"ARCHITECTURE.md",         title:"Architecture",           note:"Diagrams + pipeline"},
-  {id:"outreach",    file:"OUTREACH.md",             title:"Outreach Templates",     note:"Warm / cold / referral"},
-  {id:"demo",        file:"DEMO_SCRIPT.md",          title:"Demo Script",            note:"Word-for-word 15 min"},
-  {id:"security",    file:"SECURITY.md",             title:"Security One-Pager",     note:"Data flow + compliance"},
-  {id:"pilot",       file:"PILOT_AGREEMENT.md",      title:"Pilot Agreement",        note:"1-page LOI skeleton"},
-  {id:"integration", file:"INTEGRATION_CHECKLIST.md",title:"Integration Checklist",  note:"Zendesk + Stripe"},
+  {id:"run",         file:"RUN.md",                  title:"Getting Started",        note:"Run all 4 products", group:"Start here"},
+  {id:"status",      file:"STATUS.md",               title:"Completion Status",      note:"Done vs planned", group:"Start here"},
+  {id:"support-product", file:"SUPPORT.md",          title:"Support Decision Engine",note:"Features + architecture", group:"Products"},
+  {id:"churn-product",   file:"CHURN.md",            title:"Churn Causality Engine", note:"Features + architecture", group:"Products"},
+  {id:"knowledge-product",file:"KNOWLEDGE.md",       title:"Knowledge Search",       note:"Features + architecture", group:"Products"},
+  {id:"cost-product",    file:"COST.md",             title:"Cost Drift Detector",    note:"Features + architecture", group:"Products"},
+  {id:"portfolio",   file:"PORTFOLIO.md",            title:"Portfolio",              note:"Strategy + pricing", group:"Suite"},
+  {id:"playbook",    file:"PLAYBOOK.md",             title:"Founder Playbook",       note:"GTM, pricing, 30-day plan", group:"Suite"},
+  {id:"architecture",file:"ARCHITECTURE.md",         title:"Architecture",           note:"Diagrams + pipeline", group:"Suite"},
+  {id:"outreach",    file:"OUTREACH.md",             title:"Outreach Templates",     note:"Warm / cold / referral", group:"GTM"},
+  {id:"demo",        file:"DEMO_SCRIPT.md",          title:"Demo Script",            note:"Word-for-word 15 min", group:"GTM"},
+  {id:"security",    file:"SECURITY.md",             title:"Security One-Pager",     note:"Data flow + compliance", group:"GTM"},
+  {id:"pilot",       file:"PILOT_AGREEMENT.md",      title:"Pilot Agreement",        note:"1-page LOI skeleton", group:"GTM"},
+  {id:"integration", file:"INTEGRATION_CHECKLIST.md",title:"Integration Checklist",  note:"Zendesk + Stripe", group:"GTM"},
 ];
 const FILE_TO_ID = {};
 DOCS.forEach(d => FILE_TO_ID[d.file.toLowerCase()] = d.id);
+const DOC_IDS = new Set(DOCS.map(d => d.id));
 
 const hasMarked  = typeof window.marked  !== "undefined";
 const hasMermaid = typeof window.mermaid !== "undefined";
@@ -1115,9 +1718,16 @@ function mdFor(id){
 
 function buildNav(){
   const nav = document.getElementById("navlinks");
-  nav.innerHTML = DOCS.map(d =>
-    `<a href="#${d.id}" data-id="${d.id}">${d.title}<span class="n">${d.note}</span></a>`
-  ).join("");
+  const groups = [];
+  DOCS.forEach(d => {
+    if (!groups.includes(d.group)) groups.push(d.group);
+  });
+  nav.innerHTML = groups.map(g => {
+    const items = DOCS.filter(d => d.group === g).map(d =>
+      `<a href="#${d.id}" data-id="${d.id}">${d.title}<span class="n">${d.note}</span></a>`
+    ).join("");
+    return `<div class="nav-group">${g}</div>${items}`;
+  }).join("");
 }
 
 let mermaidCounter = 0;
@@ -1148,11 +1758,11 @@ async function render(id){
 
   document.querySelectorAll("#navlinks a").forEach(a =>
     a.classList.toggle("active", a.dataset.id === doc.id));
-  document.title = doc.title + " — SDE Docs";
+  document.title = doc.title + " — Decision Suite";
   window.scrollTo(0,0);
 }
 
-// Rewrite links to other .md docs so they switch the view instead of 404-ing.
+// Rewrite links to other .md docs or in-app hash routes.
 function interceptLinks(container){
   container.querySelectorAll("a[href]").forEach(a => {
     const href = a.getAttribute("href");
@@ -1161,6 +1771,14 @@ function interceptLinks(container){
       a.addEventListener("click", e => {
         e.preventDefault();
         location.hash = FILE_TO_ID[m[1].toLowerCase()];
+      });
+      return;
+    }
+    const hash = href.match(/^#([a-z0-9-]+)$/);
+    if (hash && DOC_IDS.has(hash[1])) {
+      a.addEventListener("click", e => {
+        e.preventDefault();
+        location.hash = hash[1];
       });
     }
   });

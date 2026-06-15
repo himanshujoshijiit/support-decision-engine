@@ -1,13 +1,18 @@
 # Python
 .venv/
+**/.venv/
 __pycache__/
+**/__pycache__/
 *.pyc
 .env
+**/.env
 .pytest_cache/
+**/.pytest_cache/
 *.egg-info/
 
 # Java / Maven
 java-service/target/
+projects/**/target/
 *.class
 
 # IDE
@@ -19,6 +24,7 @@ java-service/target/
 .DS_Store
 Thumbs.db
 
-# Local data
+# Local data / logs
 *.log
+**/sb-run.log
 data/

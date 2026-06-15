@@ -1,0 +1,22 @@
+{
+  "version": "2026-06-15",
+  "friction_thresholds": {
+    "drop_off_warning": 0.35,
+    "drop_off_critical": 0.55
+  },
+  "churn_weights": {
+    "onboarding_incomplete": 0.25,
+    "support_tickets_30d": 0.15,
+    "feature_adoption_low": 0.20,
+    "payment_failed": 0.30,
+    "login_decline": 0.10
+  },
+  "journey_steps": [
+    "signup",
+    "verify_email",
+    "connect_integration",
+    "first_value_event",
+    "invite_team",
+    "upgrade"
+  ]
+}

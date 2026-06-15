@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><title>Cost Drift Detector</title>
+<style>
+body{font-family:system-ui;background:#0f1115;color:#e6e9ef;padding:24px;max-width:800px;margin:0 auto}
+button{background:#5b8def;color:#fff;border:none;padding:10px 16px;border-radius:8px;cursor:pointer}
+.card{background:#171a21;border:1px solid #2a2f3a;border-radius:10px;padding:14px;margin-top:12px;font-size:14px}
+.warn{color:#f5a623}.crit{color:#e5484d}
+</style>
+</head>
+<body>
+<h1>Cost Drift Detector</h1>
+<p style="color:#98a2b3">AWS spend vs baseline — silent creep alerts for finance/ops.</p>
+<button onclick="run()">Run scan</button>
+<div id="out"></div>
+<script>
+async function run(){
+  const r=await fetch('/scan');
+  const d=await r.json();
+  document.getElementById('out').innerHTML=`
+    <div class="card">Total: $${d.total_current_usd} (baseline $${d.total_baseline_usd}) · <b>Δ $${d.total_delta_usd}</b></div>
+    ${(d.findings||[]).map(f=>`<div class="card"><span class="${f.severity}">${f.severity.toUpperCase()}</span> <b>${f.service}</b> (${f.account})<br/>
+      $${f.baseline_usd} → $${f.current_usd} (+$${f.delta_usd}, +${(f.delta_pct*100).toFixed(0)}%)<br/>
+      ${f.likely_cause}<br/><i>→ ${f.recommended_action}</i></div>`).join('')}
+  `;
+}
+run();
+</script>
+</body>
+</html>

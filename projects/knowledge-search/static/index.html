@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/><title>Knowledge Search</title>
+<style>
+body{font-family:system-ui;background:#0f1115;color:#e6e9ef;padding:24px;max-width:720px;margin:0 auto}
+input,button{font-size:15px;padding:10px;border-radius:8px;border:1px solid #2a2f3a}
+input{background:#1f232c;color:#fff;width:100%;box-sizing:border-box;margin-bottom:10px}
+button{background:#5b8def;color:#fff;border:none;cursor:pointer}
+.card{background:#171a21;border:1px solid #2a2f3a;border-radius:10px;padding:14px;margin-top:14px;font-size:14px}
+.cite{font-size:12px;color:#98a2b3;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>Internal Knowledge Search</h1>
+<p style="color:#98a2b3">Notion + Slack + Drive — ask a question, get an answer with citations.</p>
+<input id="q" placeholder="e.g. What is our refund policy?" value="What is our refund policy?"/>
+<button onclick="go()">Ask</button>
+<div id="out"></div>
+<script>
+async function go(){
+  const question=document.getElementById('q').value;
+  const r=await fetch('/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,top_k:3})});
+  const d=await r.json();
+  document.getElementById('out').innerHTML=`
+    <div class="card"><b>Answer</b> (${(d.confidence*100).toFixed(0)}% confidence)<br/>${d.answer}</div>
+    ${(d.citations||[]).map(c=>`<div class="card cite"><b>${c.source}</b>: ${c.title}<br/>${c.snippet}</div>`).join('')}
+  `;
+}
+go();
+</script>
+</body>
+</html>
