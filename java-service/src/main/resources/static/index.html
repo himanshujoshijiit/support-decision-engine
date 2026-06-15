@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support Decision Engine — Agent Console</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --panel: #171a21;
+      --panel-2: #1f232c;
+      --border: #2a2f3a;
+      --text: #e6e9ef;
+      --muted: #98a2b3;
+      --accent: #5b8def;
+      --green: #2ecc71;
+      --amber: #f5a623;
+      --red: #e5484d;
+      --purple: #a07bff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    header {
+      padding: 18px 28px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      background: var(--panel); position: sticky; top: 0; z-index: 5;
+    }
+    header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+    header .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+    .stats { display: flex; gap: 10px; flex-wrap: wrap; }
+    .stat {
+      background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 14px; min-width: 84px; text-align: center;
+    }
+    .stat .n { font-size: 20px; font-weight: 700; }
+    .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    main { padding: 24px 28px; max-width: 1100px; margin: 0 auto; }
+    .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+    .toolbar .spacer { flex: 1; }
+    button {
+      font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--panel-2); color: var(--text); padding: 8px 14px; transition: .12s;
+    }
+    button:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button.green { background: var(--green); border-color: var(--green); color: #08130b; font-weight: 600; }
+    button.amber { background: transparent; border-color: var(--amber); color: var(--amber); }
+    button.red { background: transparent; border-color: var(--red); color: var(--red); }
+    .filter.active { border-color: var(--accent); color: var(--accent); }
+    .empty { color: var(--muted); padding: 40px; text-align: center; border: 1px dashed var(--border); border-radius: 12px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+      padding: 18px; margin-bottom: 14px;
+    }
+    .card .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .ticket-id { font-size: 12px; color: var(--muted); }
+    .subject { font-size: 15.5px; font-weight: 600; margin: 2px 0 6px; }
+    .action-badge {
+      font-size: 12.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px;
+      white-space: nowrap;
+    }
+    .a-APPROVE_REFUND { background: rgba(46,204,113,.16); color: var(--green); }
+    .a-DENY_REFUND { background: rgba(229,72,77,.16); color: var(--red); }
+    .a-ESCALATE { background: rgba(245,166,35,.16); color: var(--amber); }
+    .a-PRIORITY_ROUTE { background: rgba(160,123,255,.18); color: var(--purple); }
+    .a-ASK_CLARIFICATION { background: rgba(91,141,239,.16); color: var(--accent); }
+    .a-RESPOND { background: rgba(152,162,179,.16); color: var(--muted); }
+    .reason { color: #cdd3df; font-size: 13.5px; line-height: 1.5; margin: 10px 0; }
+    .meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+    .chip {
+      font-size: 11px; padding: 3px 9px; border-radius: 999px;
+      background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
+    }
+    .chip.flag { color: var(--amber); border-color: rgba(245,166,35,.4); }
+    .chip.allow { color: var(--accent); border-color: rgba(91,141,239,.4); }
+    .clamp {
+      margin: 10px 0; padding: 8px 12px; border-radius: 8px; font-size: 12.5px;
+      background: rgba(229,72,77,.1); border: 1px solid rgba(229,72,77,.4); color: var(--red);
+    }
+    .clarify {
+      margin: 10px 0; padding: 8px 12px; border-radius: 8px; font-size: 12.5px;
+      background: rgba(91,141,239,.1); border: 1px solid rgba(91,141,239,.35); color: var(--accent);
+    }
+    .allow-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+    .allow-row .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    .conf-wrap { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .conf-bar { flex: 1; height: 6px; border-radius: 999px; background: var(--panel-2); overflow: hidden; max-width: 220px; }
+    .conf-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); }
+    .conf-num { font-size: 12px; color: var(--muted); }
+    .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .status-tag { font-size: 11px; padding: 3px 9px; border-radius: 999px; font-weight: 600; }
+    .s-PENDING { background: rgba(91,141,239,.16); color: var(--accent); }
+    .s-APPROVED { background: rgba(46,204,113,.16); color: var(--green); }
+    .s-OVERRIDDEN { background: rgba(245,166,35,.16); color: var(--amber); }
+    .s-ESCALATED { background: rgba(160,123,255,.18); color: var(--purple); }
+    .trail { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; font-size: 12px; color: var(--muted); }
+    .trail .line { margin: 4px 0; }
+    details.context { margin-top: 10px; }
+    details.context summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+    details.context pre {
+      background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+      padding: 10px; overflow: auto; font-size: 11.5px; color: #c4cad6;
+    }
+    .feedback {
+      margin-top: 28px; background: var(--panel); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px;
+    }
+    .feedback h2 { font-size: 14px; margin: 0 0 4px; }
+    .feedback .hint { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+    .ov { font-size: 12.5px; padding: 8px 0; border-top: 1px solid var(--border); }
+    .ov b { color: var(--text); }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Support Decision Engine — Agent Console</h1>
+      <div class="sub">Every decision recommended, actioned, and logged. Full traceability.</div>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <main>
+    <div class="toolbar">
+      <button class="filter active" data-status="">All</button>
+      <button class="filter" data-status="PENDING">Pending</button>
+      <button class="filter" data-status="APPROVED">Approved</button>
+      <button class="filter" data-status="OVERRIDDEN">Overridden</button>
+      <button class="filter" data-status="ESCALATED">Escalated</button>
+      <span class="spacer"></span>
+      <button class="primary" id="refresh">Refresh</button>
+    </div>
+
+    <div id="queue"></div>
+
+    <section class="feedback">
+      <h2>Feedback loop — recent overrides</h2>
+      <div class="hint">When agents override the engine, the reason is captured here. Rising overrides on a policy = tune that rule.</div>
+      <div id="overrides"></div>
+    </section>
+  </main>
+
+<script>
+const API = "";  // same origin
+let currentStatus = "";
+
+const ACTIONS_LABEL = {
+  APPROVE_REFUND: "Approve refund",
+  DENY_REFUND: "Deny refund",
+  ESCALATE: "Escalate",
+  PRIORITY_ROUTE: "Priority route",
+  ASK_CLARIFICATION: "Ask clarification",
+  RESPOND: "Respond"
+};
+
+async function loadStats() {
+  const r = await fetch(`${API}/api/stats`);
+  const s = await r.json();
+  const el = document.getElementById("stats");
+  const items = [
+    ["Total", s.total],
+    ["Pending", s.pending],
+    ["Auto", s.auto_executed],
+    ["Agree %", Math.round((s.agreement_rate || 0) * 100)],
+    ["Override %", Math.round((s.override_rate || 0) * 100)],
+  ];
+  el.innerHTML = items.map(([l, n]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+  renderOverrides(s.recent_overrides || []);
+}
+
+function renderOverrides(list) {
+  const el = document.getElementById("overrides");
+  if (!list.length) { el.innerHTML = `<div class="hint">No overrides yet.</div>`; return; }
+  el.innerHTML = list.map(o => `
+    <div class="ov">
+      <b>#${o.decision_id}</b> · ticket ${escapeHtml(o.ticket_id)} —
+      engine said <b>${ACTIONS_LABEL[o.recommended_action] || o.recommended_action}</b>,
+      agent chose <b>${escapeHtml(o.final_action || "—")}</b>.
+      <br/>Reason: ${escapeHtml(o.override_reason || "(none)")}
+    </div>`).join("");
+}
+
+async function loadQueue() {
+  const q = currentStatus ? `?status=${currentStatus}` : "";
+  const r = await fetch(`${API}/api/decisions${q}`);
+  const list = await r.json();
+  const el = document.getElementById("queue");
+  if (!list.length) { el.innerHTML = `<div class="empty">No decisions yet. Send a ticket:<br/><code>python scripts/simulate_ticket.py</code></div>`; return; }
+  el.innerHTML = list.map(renderCard).join("");
+}
+
+function renderCard(d) {
+  const conf = Math.round((d.confidence || 0) * 100);
+  const flags = (d.flags || []).map(f => `<span class="chip flag">${escapeHtml(f)}</span>`).join("");
+  const policies = (d.policy_matches || []).map(p => `<span class="chip">${escapeHtml(p)}</span>`).join("");
+  const allowed = (d.allowed_actions || []).map(a =>
+    `<span class="chip allow${a === d.recommended_action ? '' : ''}">${escapeHtml(ACTIONS_LABEL[a] || a)}</span>`).join("");
+  const amount = (d.amount_usd != null) ? ` ($${Number(d.amount_usd).toFixed(0)})` : "";
+  const ctx = d.context_snapshot || {};
+  const customer = ctx.name || d.customer_id;
+  const trail = (d.actions || []).map(a => `
+    <div class="line">• ${escapeHtml(a.agent_id || "agent")} <b>${escapeHtml(a.action_taken)}</b>
+      → ${escapeHtml(a.final_action || "")}${a.override_reason ? " — " + escapeHtml(a.override_reason) : ""}
+      <span style="opacity:.6">(${fmt(a.created_at)})</span></div>`).join("");
+
+  const actionButtons = d.status === "PENDING" ? `
+    <div class="actions">
+      <button class="green" onclick="act(${d.id}, 'APPROVE')">Approve recommendation</button>
+      <button class="amber" onclick="override(${d.id})">Override</button>
+      <button class="red" onclick="act(${d.id}, 'ESCALATE')">Escalate</button>
+    </div>` : "";
+
+  return `
+  <div class="card">
+    <div class="top">
+      <div>
+        <div class="ticket-id">Ticket ${escapeHtml(d.ticket_id)} · ${escapeHtml(customer)} ·
+          <span class="status-tag s-${d.status}">${d.status}</span></div>
+        <div class="subject">${escapeHtml(ACTIONS_LABEL[d.recommended_action] || d.recommended_action)}${amount}
+          ${d.auto_executed ? '<span class="chip" style="color:var(--green)">auto-executed</span>' : ''}</div>
+      </div>
+      <div class="action-badge a-${d.recommended_action}">${escapeHtml(d.recommended_action)}${amount}</div>
+    </div>
+    <div class="reason">${escapeHtml(d.reason || "")}</div>
+    ${d.policy_clamped ? `<div class="clamp"><b>Policy override</b> — the model proposed an action outside what policy allows; the engine clamped it. This is logged for compliance.</div>` : ""}
+    ${d.clarifying_question ? `<div class="clarify"><b>Suggested question:</b> ${escapeHtml(d.clarifying_question)}</div>` : ""}
+    <div class="conf-wrap">
+      <span class="conf-num">Confidence</span>
+      <div class="conf-bar"><div class="conf-fill" style="width:${conf}%"></div></div>
+      <span class="conf-num">${conf}%</span>
+    </div>
+    ${allowed ? `<div class="allow-row"><span class="lbl">Policy allowed</span>${allowed}</div>` : ""}
+    <div class="meta">${policies}${flags}<span class="chip">${escapeHtml(d.source || "")}</span></div>
+    ${actionButtons}
+    ${trail ? `<div class="trail"><b>Audit trail</b>${trail}</div>` : ""}
+    <details class="context"><summary>Customer context snapshot</summary><pre>${escapeHtml(JSON.stringify(ctx, null, 2))}</pre></details>
+  </div>`;
+}
+
+async function act(id, actionTaken, body) {
+  const payload = body || { action_taken: actionTaken, agent_id: "demo-agent" };
+  await fetch(`${API}/api/decisions/${id}/action`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  await refresh();
+}
+
+function override(id) {
+  const finalAction = prompt("Override — what action are you taking instead?\n(APPROVE_REFUND / DENY_REFUND / ESCALATE / RESPOND)", "DENY_REFUND");
+  if (finalAction === null) return;
+  const reason = prompt("Why are you overriding the engine? (captured for policy tuning)", "");
+  if (reason === null) return;
+  act(id, "OVERRIDE", { action_taken: "OVERRIDE", final_action: finalAction, override_reason: reason, agent_id: "demo-agent" });
+}
+
+async function refresh() {
+  await Promise.all([loadStats(), loadQueue()]);
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+function fmt(iso) {
+  if (!iso) return "";
+  try { return new Date(iso).toLocaleString(); } catch (e) { return iso; }
+}
+
+document.querySelectorAll(".filter").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".filter").forEach(x => x.classList.remove("active"));
+  b.classList.add("active");
+  currentStatus = b.dataset.status;
+  loadQueue();
+}));
+document.getElementById("refresh").addEventListener("click", refresh);
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

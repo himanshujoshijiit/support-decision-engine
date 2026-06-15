@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Support Decision Engine — Docs</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel-2:#1f232c; --border:#2a2f3a;
+    --text:#e6e9ef; --muted:#98a2b3; --accent:#5b8def; --green:#2ecc71;
+    --amber:#f5a623; --red:#e5484d; --purple:#a07bff; --code:#0c0e12;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex; min-height:100vh;
+  }
+  /* Sidebar */
+  nav{
+    width:268px; flex:0 0 268px; background:var(--panel); border-right:1px solid var(--border);
+    padding:20px 14px; position:sticky; top:0; height:100vh; overflow:auto;
+  }
+  nav h1{font-size:15px; margin:0 0 2px; font-weight:680;}
+  nav .sub{font-size:11.5px; color:var(--muted); margin-bottom:16px;}
+  nav a{
+    display:block; padding:9px 12px; border-radius:9px; color:var(--text);
+    text-decoration:none; font-size:13.5px; margin-bottom:4px; border:1px solid transparent;
+  }
+  nav a:hover{background:var(--panel-2);}
+  nav a.active{background:rgba(91,141,239,.14); border-color:rgba(91,141,239,.4); color:#cfe0ff;}
+  nav a .n{display:block; font-size:11px; color:var(--muted); margin-top:1px;}
+  nav .tools{margin-top:18px; border-top:1px solid var(--border); padding-top:14px;}
+  nav button{
+    width:100%; font:inherit; cursor:pointer; border-radius:8px; border:1px solid var(--border);
+    background:var(--panel-2); color:var(--text); padding:9px 12px; font-size:12.5px;
+  }
+  nav button:hover{border-color:var(--accent);}
+  /* Content */
+  main{flex:1; min-width:0; display:flex; justify-content:center;}
+  article{max-width:860px; width:100%; padding:42px 48px 120px;}
+  .banner{
+    background:rgba(245,166,35,.12); border:1px solid rgba(245,166,35,.4); color:#f7c873;
+    padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:22px; display:none;
+  }
+  article h1{font-size:30px; margin:.2em 0 .5em; line-height:1.2;}
+  article h2{font-size:21px; margin:1.5em 0 .6em; padding-bottom:.3em; border-bottom:1px solid var(--border);}
+  article h3{font-size:16.5px; margin:1.4em 0 .5em; color:#cfd6e4;}
+  article p,article li{font-size:14.5px; line-height:1.68; color:#d4d9e3;}
+  article a{color:var(--accent); text-decoration:none;}
+  article a:hover{text-decoration:underline;}
+  article strong{color:#fff;}
+  article em{color:#c7cede;}
+  article hr{border:none; border-top:1px solid var(--border); margin:28px 0;}
+  article ul,article ol{padding-left:22px;}
+  article li{margin:4px 0;}
+  blockquote{
+    margin:14px 0; padding:8px 16px; border-left:3px solid var(--accent);
+    background:var(--panel); border-radius:0 8px 8px 0; color:#c7cede;
+  }
+  blockquote p{margin:6px 0;}
+  code{
+    font-family:"SF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    background:var(--panel-2); padding:2px 6px; border-radius:5px; font-size:12.8px; color:#e7b4ff;
+  }
+  pre{
+    background:var(--code); border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; overflow:auto; margin:14px 0;
+  }
+  pre code{background:none; padding:0; color:#cdd6e4; font-size:12.8px; line-height:1.55;}
+  table{border-collapse:collapse; width:100%; margin:16px 0; font-size:13.5px; display:block; overflow:auto;}
+  th,td{border:1px solid var(--border); padding:8px 12px; text-align:left; vertical-align:top;}
+  th{background:var(--panel-2); color:#fff; font-weight:620;}
+  tr:nth-child(even) td{background:rgba(255,255,255,.015);}
+  .mermaid{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:18px; margin:18px 0; text-align:center; overflow:auto;
+  }
+  .raw{white-space:pre-wrap; font-size:13px;}
+  @media print{
+    nav{display:none;} body{display:block;} article{max-width:none; padding:0;}
+    .banner{display:none!important;}
+  }
+  @media (max-width:760px){
+    body{flex-direction:column;} nav{width:100%; height:auto; position:static;}
+    article{padding:24px 18px 80px;}
+  }
+</style>
+</head>
+<body>
+<nav>
+  <h1>Support Decision Engine</h1>
+  <div class="sub">Documentation</div>
+  <div id="navlinks"></div>
+  <div class="tools">
+    <button onclick="window.print()">Print / Save as PDF</button>
+  </div>
+</nav>
+<main><article id="content"><div class="banner" id="banner"></div><div id="rendered"></div></article></main>
+
+<!-- ===================== EMBEDDED DOCS (Markdown) ===================== -->
+<script type="text/markdown" id="md-run">
+# Getting Started — Run the App
+
+The app is **two services**: the Java audit store + dashboard, and the Python decision
+engine. You run them in **two terminals** (PowerShell on Windows). It works fully offline
+— no API keys or external accounts needed.
+
+---
+
+## Step 0 — Install Python (one time)
+
+If `python --version` doesn't work, install real Python (3.10+):
+
+- Easiest: `winget install Python.Python.3.12`
+- Or download from python.org and **check "Add Python to PATH"** during install.
+
+Then **close and reopen PowerShell** and verify:
+
+```powershell
+python --version
+```
+
+> Java + Maven (JDK 17) are already required for the Java service. Check with `mvn -version`.
+
+---
+
+## Terminal 1 — Java audit store + dashboard
+
+```powershell
+cd c:\Users\Himanshu7.Joshi\support-decision-engine\java-service
+mvn spring-boot:run
+```
+
+Leave it running. It serves:
+- **Dashboard:** http://localhost:8080/
+- API: http://localhost:8080/api/decisions
+
+---
+
+## Terminal 2 — Python decision engine
+
+```powershell
+cd c:\Users\Himanshu7.Joshi\support-decision-engine\python-service
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+Leave it running too. It serves:
+- API + interactive docs: http://localhost:8000/docs
+- Health check: http://localhost:8000/health
+
+> If `Activate.ps1` is blocked, run once:
+> `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` then re-run the activate line.
+
+> **No `.env` or API keys needed** — it defaults to the offline heuristic reasoner + mock
+> customer data, so the whole thing runs with zero external accounts.
+
+---
+
+## Step 3 — Fire the demo tickets
+
+In a third terminal (or reuse Terminal 2 with the venv active):
+
+```powershell
+cd c:\Users\Himanshu7.Joshi\support-decision-engine\python-service
+python scripts\simulate_ticket.py
+```
+
+This sends 5 scenarios. Open **http://localhost:8080/** and you'll see the decisions
+appear with the recommended action, confidence, the "Policy allowed" actions, and reasons.
+Click **Approve / Override / Escalate** and watch the audit trail + stats update.
+
+---
+
+## (Optional) Run the test suites
+
+```powershell
+# Python - from python-service with the venv active
+pytest
+
+# Java - from java-service
+mvn test
+```
+
+---
+
+## Quick reference
+
+| Service | Start command | URL |
+|---|---|---|
+| Java (dashboard + audit) | `mvn spring-boot:run` | http://localhost:8080/ |
+| Python (engine) | `uvicorn app.main:app --reload --port 8000` | http://localhost:8000/docs |
+| Demo driver | `python scripts\simulate_ticket.py` | appears in dashboard |
+
+Start the **Java service first** so the Python engine has somewhere to send decisions
+(it still works if Java is down — it just logs a warning).
+
+See [INTEGRATION_CHECKLIST.md](INTEGRATION_CHECKLIST.md) to switch from mock to real
+Zendesk + Stripe, and the [Architecture](ARCHITECTURE.md) for how the pipeline fits together.
+</script>
+
+<script type="text/markdown" id="md-playbook">
+# Support Decision Engine — Founder Playbook
+
+> The product is not the hard part. **Getting the first 3 paying customers is.**
+
+This repo is the technical MVP. This doc is the go-to-market that goes with it.
+
+> **Companion docs:** [Architecture & pipelines](ARCHITECTURE.md) ·
+> [Outreach templates](OUTREACH.md) · [Demo script](DEMO_SCRIPT.md) ·
+> [Security one-pager](SECURITY.md) · [Pilot agreement](PILOT_AGREEMENT.md) ·
+> [Integration checklist](INTEGRATION_CHECKLIST.md)
+
+---
+
+## The one architectural principle (locked in)
+
+```
+Hard rules (policy)  ->  Soft reasoning (LLM)  ->  Human decision  ->  Audit
+```
+
+**Never let the LLM invent an action outside what policy allows.** This is now enforced
+in code by the Decision Orchestrator (`python-service/app/orchestrator.py`): the policy
+engine emits `allowed_actions`, and any out-of-policy model recommendation is clamped and
+logged (`policy_clamped`). Refund amounts are capped to the policy ceiling. That is the
+trust story and the legal cover — not a prompt instruction, an enforced boundary.
+
+---
+
+## Gaps closed before build
+
+| Gap | Fix |
+|-----|-----|
+| ICP too broad | Wedge: subscription SaaS, **$50–500 ARPU, refund-heavy** (devtools, education, fitness) |
+| No success metrics | Defined below: time-to-action, override rate, refund $ saved, audit coverage |
+| Security/compliance | [SECURITY.md](SECURITY.md): read-only scopes, retention, SOC2 timeline |
+| Failure modes | Policy runs first; LLM reasons **only within allowed actions** (enforced) |
+| Integration reality | **One helpdesk for MVP — Zendesk.** See [INTEGRATION_CHECKLIST.md](INTEGRATION_CHECKLIST.md) |
+| Human workflow | Sidebar/queue console, not a separate product |
+| Policy ownership | "We encode your playbook in week 1" = the onboarding fee |
+
+---
+
+## What you're building
+
+A **judgment layer** between an incoming support ticket and the human/action that
+resolves it. It reads context, applies policy, and either acts or tells the agent exactly
+what to do and why.
+
+**One-liner:** *"Your support team will never give a wrong refund, miss an SLA, or make
+an inconsistent call again."*
+
+Not a chatbot. Not another helpdesk. A decision + audit system.
+
+---
+
+## How the repo maps to the 6-week plan
+
+| Week | Plan | Where it lives |
+|---|---|---|
+| 1–2 | Data in (webhook + context) | `python-service/app/webhooks.py`, `app/context/` |
+| 3 | Policy engine (core IP) | `python-service/app/policy/`, `config/policies.json` |
+| 4 | LLM reasoning layer | `python-service/app/llm/` |
+| 5 | Agent UI + audit log | `java-service/.../static/index.html`, `java-service/.../model/Decision.java` |
+| 6 | Feedback loop | override capture in `DecisionService` + `/api/stats` |
+
+**Not in MVP:** mobile app, complex settings UI, multi-language, self-serve signup.
+Integrations are mocked behind interfaces so it runs with zero accounts.
+
+---
+
+## The 15-minute demo
+
+1. **(1–3) The pain.** Ask: *"How do your agents decide whether to give a refund?"* The
+   answer will be vague. *"That's exactly the problem."*
+2. **(3–10) The demo.** Run `python scripts/simulate_ticket.py`. Walk the dashboard:
+   ticket in -> customer history pulled -> policy flags it -> plain-English recommendation
+   with a confidence score -> agent clicks approve -> done in 20s, logged forever. Then show
+   an **override** and how the reason is captured.
+3. **(10–13) The ROI.** *"How many tickets/day? How many are judgment calls? What's the
+   cost of one wrong refund or one missed SLA?"* Let the numbers sell.
+4. **(13–15) The ask.** *"We're working with 3 pilot companies at a reduced rate. Let me
+   set this up on your actual tickets for 2 weeks, no commitment. Want to try?"*
+
+---
+
+## First 3 customers
+
+1. **Warm network** — one founder/ops head you know. Free for 30 days for honest feedback
+   + a testimonial. Social proof unlocks customers 2 and 3.
+2. **Targeted cold outreach** — SaaS, 50–200 employees, has a support team, uses
+   Intercom/Zendesk. Message the Head of Support or COO.
+3. **Referral** — after feedback, ask *"Who else do you know running a support team that
+   would find this useful?"* One warm referral beats 100 cold emails.
+
+See [OUTREACH.md](OUTREACH.md) for word-for-word templates.
+
+---
+
+## Pricing
+
+| Package | Price | Includes |
+|---|---|---|
+| Pilot | Free / 30 days | Full setup, your involvement, feedback expected |
+| Starter | $499/mo | Up to 500 tickets/mo, 1 integration |
+| Growth | $1,200/mo | Unlimited tickets, 3 integrations, audit log |
+| Custom | $2,500+/mo | Custom policy engine, dedicated support |
+
+**Onboarding fee:** one-time setup fee (e.g. ₹75,000–₹1,50,000). Covers your time and
+filters out non-serious buyers.
+
+---
+
+## The moat
+
+The feedback loop. Every override + reason (captured in the Java audit store and surfaced
+in `/api/stats`) is raw material for tuning that customer's `policies.json`. The longer
+they use it, the better it fits their policies — and the harder it is to rip out.
+
+---
+
+## 30-day action plan (with deliverables)
+
+| Week | Build | GTM | Deliverable |
+|------|-------|-----|-------------|
+| 1 | Zendesk webhook + Stripe context | 5 warm messages | One real ticket flowing into the audit store |
+| 2 | Policy engine + LLM JSON + orchestrator | 5 cold LinkedIn | API prints a clamped, policy-safe recommendation |
+| 3 | Agent console + audit log | 3 demo calls | Recordable 10-min demo |
+| 4 | Override capture + policy export | Close 1 pilot | Signed pilot + sandbox checklist |
+
+## Pilot success criteria (put in the pilot agreement)
+
+- ≥ 80% of recommendations in the "acceptable" set per ops lead
+- ≥ 30% reduction in time-to-first-action on judgment tickets
+- 100% audit coverage
+- Override reasons captured on ≥ 90% of overrides
+
+These map to `GET /api/stats` (agreement/override rate) and the per-decision audit trail.
+See [PILOT_AGREEMENT.md](PILOT_AGREEMENT.md).
+</script>
+
+<script type="text/markdown" id="md-architecture">
+# Technical Architecture
+
+The whole product rests on one principle:
+
+```
+Hard rules (policy)  ->  Soft reasoning (LLM)  ->  Human decision  ->  Audit
+```
+
+**Never let the LLM invent an action outside what policy allows.** That is the trust
+story and the legal cover. In this codebase that boundary is enforced in code by the
+**Decision Orchestrator** (`python-service/app/orchestrator.py`), not just by a prompt.
+
+---
+
+## 1. System diagram
+
+```mermaid
+flowchart TB
+    subgraph Sources
+        HD[Helpdesk<br/>Zendesk / Intercom]
+        BILL[Billing<br/>Stripe / Chargebee]
+        CRM[Optional: CRM / Product DB]
+    end
+
+    subgraph PythonService["Python service - AI judgment layer"]
+        WH[Webhook Receiver<br/>FastAPI]
+        NORM[Event Normalizer<br/>canonical Ticket schema]
+        CTX[Context Aggregator<br/>mock / Stripe provider]
+        POL[Policy Engine<br/>JSON rules + allowed_actions]
+        LLM[LLM Reasoning Layer<br/>structured JSON output]
+        ORCH[Decision Orchestrator<br/>policy CAPS the LLM action]
+    end
+
+    subgraph JavaService["Java service - audit + decision store"]
+        API[REST API]
+        STORE[(Decisions + audit trail<br/>H2 dev / Postgres pilot)]
+        UI[Agent Console / Sidebar]
+    end
+
+    HD -->|ticket.created / updated| WH
+    WH --> NORM
+    NORM --> CTX
+    BILL --> CTX
+    CRM --> CTX
+    CTX --> POL
+    POL -->|allowed_actions, max_refund| ORCH
+    CTX --> LLM
+    POL -->|constraints| LLM
+    LLM -->|proposed action| ORCH
+    ORCH -->|POST /api/decisions| API
+    API --> STORE
+    API --> UI
+    UI -->|approve / override / escalate| API
+    API --> STORE
+    API -.->|optional write-back| HD
+```
+
+Why the split? Python is where the AI "wow moment" and the LLM ecosystem live. Java is
+the durable, traceable system of record that ops and finance buyers trust — a full
+record of *what was recommended, what the human did, and why*.
+
+---
+
+## 2. Request flow (single ticket)
+
+```mermaid
+sequenceDiagram
+    participant Z as Zendesk / Intercom
+    participant W as Webhook (FastAPI)
+    participant C as Context Provider
+    participant P as Policy Engine
+    participant L as LLM Reasoner
+    participant O as Orchestrator
+    participant A as Audit Store (Java)
+    participant U as Agent Console
+
+    Z->>W: ticket.created webhook
+    W->>W: normalize -> Ticket
+    W->>C: fetch customer + billing context
+    C-->>W: CustomerContext snapshot
+    W->>P: build_facts(ticket, context) -> evaluate
+    P-->>O: decisive_action, allowed_actions[], max_refund_usd, flags
+    W->>L: ticket + context + policy (incl. allowed_actions)
+    L-->>O: proposed action, amount, confidence, reason
+    O->>O: ENFORCE - clamp action to allowed_actions; cap refund
+    O->>A: POST /api/decisions (pending)
+    A-->>O: stored decision id
+    O-->>W: Decision (returned to caller)
+    U->>A: agent approves / overrides / escalates (+reason)
+    A->>A: append immutable audit action
+    A-.->>Z: optional tag / internal note
+```
+
+---
+
+## 3. The pipeline, stage by stage
+
+| # | Stage | Code | What it does |
+|---|-------|------|--------------|
+| 1 | **Intake / normalize** | `app/webhooks.py`, `app/main.py` | Turn a Zendesk/Intercom payload into a canonical `Ticket` (detects category, refund intent, amount). |
+| 2 | **Context** | `app/context/` | Fetch customer LTV, tenure, refund history, fraud risk, subscription. Mock provider by default; Stripe provider skeleton included. |
+| 3 | **Policy engine** | `app/policy/engine.py`, `config/policies.json` | Deterministic JSON rules run **first**. Emits `decisive_action`, **`allowed_actions[]`**, `max_refund_usd`, and `flags`. This is the IP an ops team owns and tunes. |
+| 4 | **LLM reasoning** | `app/llm/` | Explains the call in plain English and proposes an action **from `allowed_actions`**. Falls back to a deterministic heuristic with no API key. |
+| 5 | **Orchestrator** | `app/orchestrator.py` | The trust gate. If the model proposes a disallowed action it is **clamped** to the policy's decisive/safe action and flagged `policy_clamped`. Refund amounts are **capped** to `max_refund_usd`. |
+| 6 | **Audit + human action** | `java-service/` | Persists every decision + the agent's action (approve / override / escalate) and the override reason — the feedback loop. |
+
+### The trust boundary in detail
+
+The policy engine never returns just one action — it returns the **set** of actions the
+LLM is allowed to recommend:
+
+- Each rule's `then.allow` list declares what that rule permits (e.g. the fraud rule
+  allows only `DENY_REFUND` and `ESCALATE` — **never** `APPROVE_REFUND`).
+- The always-safe actions `RESPOND`, `ASK_CLARIFICATION`, `ESCALATE` are unioned in, so a
+  human is never boxed into a single option and can always ask or escalate.
+- The orchestrator compares the model's proposal against this set. Outside the set =>
+  clamp + `policy_clamped = true` + `auto_executed = false` + confidence reduced. The
+  original model rationale is preserved in the reason for the audit trail.
+
+This means **a hallucinating or jailbroken model cannot issue a refund the policy
+forbids.** That is the difference between a demo and something finance will sign off on.
+
+---
+
+## 4. Canonical data model
+
+The `Decision` payload the Python engine produces and ships to the audit store:
+
+```json
+{
+  "ticket_id": "T-1001",
+  "customer_id": "cus_loyal_whale",
+  "recommended_action": "APPROVE_REFUND",
+  "amount_usd": 49,
+  "confidence": 0.92,
+  "reason": "8-month customer, $2,400 LTV, first refund, duplicate charge confirmed - low risk, aligns with policy.",
+  "clarifying_question": null,
+  "policy_matches": ["auto_approve_high_ltv_billing"],
+  "allowed_actions": ["APPROVE_REFUND", "ASK_CLARIFICATION", "ESCALATE"],
+  "flags": ["trusted", "auto_approved"],
+  "source": "heuristic",
+  "auto_executed": true,
+  "policy_clamped": false,
+  "context_snapshot": { "ltv_usd": 2400, "tenure_months": 8, "refunds_given_count": 0, "fraud_risk": "low" },
+  "created_at": "2026-06-15T10:12:00Z"
+}
+```
+
+After the agent acts, the Java store appends an immutable `AgentAction`
+(`action_taken`, `final_action`, `agent_id`, `override_reason`, `created_at`).
+
+---
+
+## 5. Policy config (the part ops owns)
+
+Rules live in `python-service/config/policies.json`, are sorted by `priority` (highest
+wins), and are hot-reloadable via `POST /admin/reload-policies` — no redeploy.
+
+```json
+{
+  "id": "deny_high_fraud_refund",
+  "description": "High fraud risk + refund request: deny by default and route to fraud review.",
+  "priority": 850,
+  "when": {
+    "all": [
+      { "fact": "ticket.refund_requested", "op": "eq", "value": true },
+      { "fact": "customer.fraud_risk", "op": "eq", "value": "high" }
+    ]
+  },
+  "then": {
+    "action": "DENY_REFUND",
+    "allow": ["DENY_REFUND", "ESCALATE"],
+    "flags": ["fraud_risk"],
+    "auto_execute": false
+  }
+}
+```
+
+`when` supports nested `all` / `any` / `not` groups and leaf conditions
+`{fact, op, value}`. Ops: `eq, ne, gt, gte, lt, lte, in, not_in, contains`.
+`then.allow` is the action whitelist; `then.max_refund_usd` sets the refund ceiling.
+
+---
+
+## 6. LLM prompt skeleton (orchestrator-owned)
+
+```text
+You are the reasoning core of a Support Decision Engine.
+
+- You may ONLY choose a recommended_action from the allowed_actions provided.
+  Anything outside that list is discarded by the orchestrator.
+- Prefer the policy's decisive_action unless the ticket text reveals something the
+  rules could not see (and your alternative is still allowed).
+- Never invent customer facts. Cite the numbers that drove the call.
+- If you lack information, use ASK_CLARIFICATION (when allowed).
+
+Output JSON only:
+{
+  "recommended_action": "<one of allowed_actions>",
+  "amount_usd": <number or null, only for APPROVE_REFUND>,
+  "confidence": <0.0-1.0>,
+  "reason": "<2-3 sentences for the agent>",
+  "clarifying_question": "<if action is ASK_CLARIFICATION, else null>"
+}
+```
+
+---
+
+## 7. Stack
+
+| Layer | This MVP | Pilot / scale path |
+|-------|----------|--------------------|
+| Webhook + API | **Python (FastAPI)** | same |
+| Reasoning | Heuristic (offline) -> **OpenAI / Anthropic** via env | tool-use / JSON schema |
+| Policy | **JSON rules engine** (custom, explainable) | per-customer rule files + editor |
+| Audit / store | **Java (Spring Boot)** + H2 | **Postgres** (swap `spring.datasource.*`) |
+| Agent UI | **Vanilla JS console** (`static/index.html`) | React sidebar inside the helpdesk |
+| Queue | direct call | **Redis / BullMQ / SQS** to decouple slow Stripe/LLM calls |
+| Auth | none (MVP) | **Clerk / Auth0** |
+| Hosting | local / single region | Railway / Render / Fly -> K8s |
+
+> What's intentionally **not** in the MVP: mobile app, complex settings UI,
+> multi-language, self-serve signup. Integrations are mocked behind clean interfaces so
+> the system runs end-to-end with zero external accounts.
+
+See [INTEGRATION_CHECKLIST.md](INTEGRATION_CHECKLIST.md) to wire real Zendesk + Stripe,
+and [SECURITY.md](SECURITY.md) for the data-flow / compliance one-pager.
+</script>
+
+<script type="text/markdown" id="md-outreach">
+# Outreach Templates
+
+Replace `[bracketed]` fields before sending. Lead with the *judgment layer* framing —
+never "chatbot," never "AI support." The wedge ICP: **subscription SaaS, $50–500 ARPU,
+refund-heavy categories** (devtools, education, fitness apps) on Zendesk + Stripe.
+
+---
+
+## Template A — Warm network (founder / ops you know)
+
+**Subject:** Quick favor — testing a support decision tool
+
+> Hey [Name],
+>
+> I'm building something for support teams: when a ticket comes in (refund, billing
+> dispute, escalation), the system pulls customer history + applies your refund/SLA rules
+> and gives the agent a clear recommendation with reasoning — approve, deny, escalate, or
+> ask a question.
+>
+> Not a chatbot. More like a judgment layer so agents don't make inconsistent calls.
+>
+> I'm looking for **one team** to run a **free 30-day pilot** on real tickets. I'd handle
+> setup; I'd need honest feedback and, if it works, a short testimonial.
+>
+> Worth 15 minutes this week to see if it fits [Company]?
+
+---
+
+## Template B — Cold LinkedIn (Head of Support / COO)
+
+**Connection note (≤300 chars):**
+
+> Building a tool that recommends refund/escalate/deny on every support ticket with
+> plain-English reasoning + full audit log. 2-week Zendesk plug-in. Would a 15-min demo be
+> useful for [Company]'s team?
+
+**Follow-up DM (after connect):**
+
+> Thanks for connecting, [Name].
+>
+> Quick context: most support teams decide refunds/escalations from gut feel + tribal
+> knowledge. We sit between the ticket and the agent — pull Stripe/history, apply your
+> policies, recommend an action with confidence + reason.
+>
+> Pilots are **free for 30 days**. Setup is on us. Typical fit: SaaS teams doing 200+
+> judgment-call tickets/month on Zendesk + Stripe.
+>
+> Open to a 15-min screen share? I can show a live ticket flow in under 10 minutes.
+
+---
+
+## Template C — Post-demo, no decision yet
+
+> Hi [Name] — thanks again for the demo.
+>
+> Three things teams usually care about before a pilot:
+> 1. **Wrong refund risk** — every decision is logged; policy rules run before any AI
+>    suggestion, and the AI can't choose an action policy doesn't allow.
+> 2. **Agent adoption** — one-click approve/override inside the queue.
+> 3. **ROI** — [X] judgment tickets/day × [Y] min saved × [Z] cost/hour.
+>
+> If helpful, I can run a **2-week pilot on your Zendesk sandbox or a tagged queue** — no
+> commitment, no card.
+>
+> Does [date] work for a 20-min kickoff?
+
+---
+
+## Template D — Ask for referral (after pilot success)
+
+> [Name] — really appreciate the feedback on the pilot. Override rate dropped to [X]% and
+> agents said the "why" field was the most useful part.
+>
+> Who else do you know running a support team that still decides refunds/escalations
+> manually? Happy to offer them the same pilot terms if you intro us.
+
+---
+
+## Template E — Finance / CFO angle (when ops loops them in)
+
+**Subject:** Audit trail for support refund decisions
+
+> Hi [Name],
+>
+> [Ops contact] asked me to share how we handle refund judgment calls on support tickets.
+>
+> For every ticket: customer LTV, prior refunds, policy rule hits, AI recommendation,
+> agent action, and override reason — stored in an audit log exportable for finance review.
+>
+> Goal: fewer inconsistent refunds, faster resolution, full traceability.
+>
+> Happy to join a 15-min call or send a one-page security + data flow summary.
+
+---
+
+## Sequencing
+
+1. **Warm first.** One founder/ops head you know -> free pilot -> testimonial.
+2. **Cold with proof.** 5 targeted LinkedIn DMs/week to Head of Support / COO at ICP SaaS.
+3. **Referral after every pilot.** One warm intro beats 100 cold emails.
+
+Pair every send with the [demo script](DEMO_SCRIPT.md) and the
+[security one-pager](SECURITY.md).
+</script>
+
+<script type="text/markdown" id="md-demo">
+# 15-Minute Demo Script (word for word)
+
+**Setup:** a real or realistic ticket pre-loaded. Screen: the agent console
+(`http://localhost:8080/`) with the recommendation panel visible. Have
+`python scripts/simulate_ticket.py` ready to fire the demo set.
+
+---
+
+### [0:00–1:00] Open
+
+> "Before I show anything — quick question: when your agents get a refund request, how do
+> they decide yes or no?"
+
+*[Let them talk. Don't interrupt.]*
+
+> "That's exactly what we built for. Not replacing agents — giving them a consistent
+> judgment layer so finance and ops can trust every call."
+
+---
+
+### [1:00–2:00] Frame the flow
+
+> "I'll walk one ticket end to end. Ticket comes in from Zendesk, we pull customer and
+> billing context, run your policies, then the system recommends an action with a
+> plain-English reason. Agent approves or overrides in one click. Everything is logged."
+
+---
+
+### [2:00–4:00] Ticket arrives
+
+*[Click the "Double charged" ticket.]*
+
+> "Here's a billing ticket — customer says they were double-charged. Watch the right panel."
+
+*[Context loads: LTV $2,400, 8-month customer, 0 refunds in 90 days, duplicate charge.]*
+
+> "In about two seconds we've pulled tenure, lifetime value, refund history, and billing
+> status. This is what agents usually tab-hop for."
+
+---
+
+### [4:00–6:00] Policy engine (runs FIRST)
+
+*[Point at the policy chips and the "Policy allowed" row.]*
+
+> "Policy layer ran first — not the AI. Your rules: high-LTV billing issues with no recent
+> refund are eligible for refund up to your cap. This ticket hit that rule. That's your
+> playbook, encoded. And notice this row — these are the *only* actions the AI is even
+> allowed to recommend on this ticket. It physically cannot invent a different one."
+
+---
+
+### [6:00–9:00] LLM recommendation
+
+*[Show: Action APPROVE REFUND ($49), confidence, reason block.]*
+
+> "Recommendation: approve refund of $49. Reason: eight-month customer, $2,400 LTV, first
+> refund request, duplicate charge confirmed — low fraud risk, aligns with policy."
+
+> "The model doesn't invent policy. It explains the call inside the boundaries your rules
+> allow. If it ever tried to step outside them, the system overrides it and logs that it
+> tried — that's the compliance story."
+
+---
+
+### [9:00–11:00] Agent action + audit
+
+*[Click Approve.]*
+
+> "Agent clicks approve — done. The helpdesk updates; the refund triggers or queues per
+> your workflow."
+
+*[Open the audit trail on the card.]*
+
+> "This is what your CFO cares about: ticket ID, context snapshot, rules fired,
+> recommendation, the human action, and a timestamp. If someone overrides, we capture
+> *why* — and that reason feeds policy tuning later."
+
+---
+
+### [11:00–13:00] ROI (let them do the math)
+
+> "Rough numbers — how many tickets a day need a judgment call: refund, credit,
+> escalation? … And how long does an agent spend researching the account and billing
+> before deciding? … What's the fully loaded cost per agent hour?"
+
+*[Pause. Let them multiply.]*
+
+> "Even at 50 judgment tickets a day and five minutes saved each, that's four-plus hours
+> back daily — before counting wrong refunds or missed SLAs."
+
+---
+
+### [13:00–15:00] Close
+
+> "We're running three pilots at reduced setup — plug into your Zendesk and Stripe, encode
+> your refund and escalation rules in week one, run on a real queue or sandbox for two
+> weeks, no commitment."
+
+> "If it's useful, we move to Starter at $499/month; setup is a one-time onboarding fee
+> because we're encoding your policies with you."
+
+> "Want to pick a pilot kickoff date, or should I send the security one-pager and sandbox
+> checklist first?"
+
+---
+
+## Objection handlers (keep in pocket)
+
+| They say | You say |
+|----------|---------|
+| "We already use AI in Zendesk" | "That's usually deflection or macros. We're focused on **judgment calls** — refund, deny, escalate — with audit and a hard policy boundary." |
+| "Agents won't trust AI" | "They don't have to. Policy runs first; the AI can only suggest actions policy allows; agents override with one click and a reason." |
+| "Security?" | "Read-only APIs, no training on your data without opt-in, configurable retention, audit export for compliance. One-pager attached." |
+| "What if the AI gives a wrong refund?" | "It structurally can't exceed your policy — the engine clamps any out-of-policy action and logs the attempt. The refund ceiling is enforced in code." |
+| "Build in-house?" | "You can — most teams underestimate policy maintenance and audit. We're live in two weeks; you own the rules, we run the layer." |
+
+---
+
+## The live demo set
+
+`python scripts/simulate_ticket.py` fires five scenarios that each tell a clear story:
+
+1. High-LTV billing refund -> **AUTO-APPROVE** (capped at policy ceiling)
+2. Repeat refunder within 90 days -> **ESCALATE for review**
+3. Angry high-value customer -> **PRIORITY_ROUTE**
+4. SLA breach -> **ESCALATE immediately**
+5. Refund with no amount -> **ASK_CLARIFICATION**
+</script>
+
+<script type="text/markdown" id="md-security">
+# Security & Data-Flow One-Pager
+
+A page you can send to ops/finance before a pilot. Keep it honest — if you're
+pre-compliance, say so with a timeline.
+
+---
+
+## What data we touch
+
+| Source | Scope | Examples |
+|--------|-------|----------|
+| Helpdesk (Zendesk) | **Read-only** ticket + requester | subject, body, requester id, tags, priority |
+| Billing (Stripe) | **Read-only** customer + charges | LTV, subscription status, recent charges, refund history |
+| Optional write-back | Ticket tag / internal note only | "auto-approved by SDE", decision id |
+
+We do **not** request payment-method, card, or PII beyond what's needed to decide a
+ticket. No write access to issue refunds unless a customer explicitly enables it.
+
+---
+
+## How a decision flows
+
+```
+ticket -> normalize -> fetch context (read-only) -> policy rules -> LLM reason
+   -> orchestrator (policy caps the action) -> store decision -> agent acts -> audit log
+```
+
+The LLM only ever sees the **context snapshot** for the ticket being decided, and can
+only recommend an action the policy engine already permitted.
+
+---
+
+## Controls
+
+- **Read-only scopes** — Zendesk ticket read, Stripe customer/charges read.
+- **No model training on your data** without written opt-in.
+- **Policy-before-LLM** — deterministic rules run first; the AI cannot choose an action
+  outside the allowed set, and refund amounts are capped in code. Out-of-policy attempts
+  are logged (`policy_clamped`).
+- **Immutable audit trail** — every decision + human action is appended, attributed by
+  agent id, with timestamps; exportable for finance review.
+- **Encryption** — TLS in transit; encryption at rest (Postgres) for pilots.
+- **Data retention** — 90 days default, configurable delete.
+- **Tenant isolation** — one policy file + datastore per customer.
+
+---
+
+## Compliance posture (be honest)
+
+- **SOC 2:** roadmap — Type I targeted [Qx], Type II [Qx+2]. Pre-compliance today.
+- **GDPR/data deletion:** retention is configurable; deletion on request is supported.
+- **Subprocessors:** LLM provider (OpenAI/Anthropic) only when enabled; otherwise the
+  engine runs fully offline on the deterministic heuristic.
+
+---
+
+## Pilot defaults
+
+- Run on a **sandbox or a single tagged queue** first.
+- Read-only by default — no refunds executed automatically during the pilot.
+- All recommendations reviewed by a human; we measure agreement vs. override rate.
+</script>
+
+<script type="text/markdown" id="md-pilot">
+# Pilot Agreement — Skeleton (1 page)
+
+> Not legal advice. A lightweight letter-of-intent to start a pilot fast. Have counsel
+> review before signing anything binding.
+
+---
+
+**Between:** [Your Company] ("Provider") and [Customer] ("Customer")
+**Effective date:** [date]   **Term:** 30 days from kickoff (the "Pilot")
+
+### 1. Scope
+Provider will deploy the Support Decision Engine against Customer's **[sandbox / single
+tagged queue]** on **Zendesk + Stripe (read-only)**, encode Customer's refund/escalation
+policies, and produce recommendations + an audit trail for support tickets.
+
+### 2. What Provider does
+- Encode Customer's policies into the engine in week 1 (the onboarding work).
+- Connect read-only Zendesk + Stripe access.
+- Provide the agent console and audit export.
+- Support during the Pilot.
+
+### 3. What Customer does
+- Provide read-only API access and a test/sandbox queue.
+- Nominate an **ops owner** for policy decisions.
+- Give honest feedback; review recommendations.
+- Provide a short testimonial **if** success criteria are met.
+
+### 4. Data & security
+- Read-only scopes only; no automatic refund execution during the Pilot.
+- No model training on Customer data without written opt-in.
+- Retention: 90 days default, deleted on request at Pilot end.
+- See the [Security one-pager](SECURITY.md).
+
+### 5. Success criteria (measured, see below)
+The Pilot is "successful" if the criteria in the table below are met by day 30.
+
+### 6. Fees
+- **Pilot:** free for 30 days.
+- **On success -> conversion:** Starter at **$499/month** + a one-time onboarding fee
+  (policy encoding). Pricing per the proposal.
+
+### 7. Confidentiality & IP
+- Mutual confidentiality for shared data and methods.
+- Provider retains all IP in the engine; Customer owns its policy content and its data.
+
+### 8. Termination
+Either party may end the Pilot with 5 days' notice. On termination, Provider deletes
+Customer data within 30 days on request.
+
+---
+
+**Signed:**
+
+Provider: ___________________  Date: ________
+Customer: ___________________  Date: ________
+
+---
+
+## Pilot success criteria (put these numbers in the agreement)
+
+| Metric | Target |
+|--------|--------|
+| Recommendations in the "acceptable" set per ops lead | **≥ 80%** |
+| Reduction in time-to-first-action on judgment tickets | **≥ 30%** |
+| Audit coverage of decisions | **100%** |
+| Override reasons captured on overrides | **≥ 90%** |
+
+These map directly to what the engine measures: agreement rate and override rate on
+`GET /api/stats`, and the audit trail per decision.
+</script>
+
+<script type="text/markdown" id="md-integration">
+# Zendesk + Stripe Integration Checklist
+
+For MVP we pick **one** helpdesk (Zendesk — usually easiest for B2B SaaS) and **one**
+billing source (Stripe). Both are mocked behind clean interfaces, so you flip from mock
+to real by setting env vars and dropping in credentials — no code changes to the pipeline.
+
+---
+
+## 0. Local first (no accounts)
+
+The engine runs fully offline with the mock context provider and heuristic reasoner:
+
+```bash
+# Java audit store
+cd java-service && mvn spring-boot:run        # http://localhost:8080/
+
+# Python engine
+cd python-service && uvicorn app.main:app --reload --port 8000
+python scripts/simulate_ticket.py             # fire the demo set
+```
+
+Confirm decisions appear in the dashboard before wiring anything real.
+
+---
+
+## 1. Zendesk (read-only)
+
+**API scopes / auth**
+- [ ] Create an API token (Admin Center -> Apps and integrations -> APIs -> Zendesk API).
+- [ ] Use a dedicated read-only agent/service account.
+- [ ] Required read: **Tickets read**, **Users read** (requester context).
+- [ ] (Optional write-back) **Tickets write** only if you want tags / internal notes.
+
+**Webhook**
+- [ ] Create a webhook -> target URL `https://<your-host>/webhooks/zendesk`.
+- [ ] Trigger on `ticket.created` (and optionally `ticket.updated`).
+- [ ] Add a signing secret; verify the signature at the receiver (TODO before prod).
+- [ ] Payload: ensure subject/description/requester are included.
+
+**Test tickets**
+- [ ] Create a sandbox or use a **tagged queue** (e.g. tag `sde-pilot`).
+- [ ] Fire: a billing/refund ticket, a no-response/SLA ticket, an angry message.
+- [ ] Confirm each becomes a `Decision` in the dashboard with the expected action.
+
+> The normalizer (`app/webhooks.py::from_zendesk`) already tolerates flattened or nested
+> payloads and auto-detects category + refund intent + amount.
+
+---
+
+## 2. Stripe (read-only)
+
+**API key / scopes**
+- [ ] Create a **restricted key** (Developers -> API keys -> Restricted).
+- [ ] Grant **read** on: Customers, Charges, Subscriptions, Refunds, Disputes.
+- [ ] Grant **no write** permissions.
+- [ ] Store as `STRIPE_API_KEY`; never commit it.
+
+**Wire it up**
+- [ ] Set in `python-service/.env`:
+
+```
+CONTEXT_PROVIDER=stripe
+STRIPE_API_KEY=rk_live_or_test_xxx
+```
+
+- [ ] Map your Zendesk requester -> Stripe customer (email match or external id).
+- [ ] Implement the field mapping in `app/context/stripe_provider.py`
+      (LTV, tenure, refunds_last_90d, subscription_status, fraud_risk).
+
+**Test**
+- [ ] Use Stripe **test mode** customers with known LTV / refund history.
+- [ ] Confirm the `context_snapshot` on a decision reflects real Stripe data.
+
+---
+
+## 3. LLM provider (optional — heuristic works without it)
+
+- [ ] Set in `.env`:
+
+```
+LLM_PROVIDER=openai        # or anthropic
+OPENAI_API_KEY=sk-xxx      # or ANTHROPIC_API_KEY
+LLM_MODEL=gpt-4o-mini
+```
+
+- [ ] Confirm `GET /health` shows `"llm_live": true`.
+- [ ] Run the demo set and confirm reasons are model-generated, actions still respect
+      `allowed_actions` (the orchestrator clamps anything out of policy).
+
+---
+
+## 4. Audit store -> Postgres (for the pilot)
+
+H2 (in-memory) is the default. For a pilot, point Spring at Postgres in
+`java-service/src/main/resources/application.properties`:
+
+```properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/sde
+spring.datasource.username=sde
+spring.datasource.password=...
+spring.jpa.hibernate.ddl-auto=update
+```
+
+- [ ] Confirm decisions persist across restarts.
+- [ ] Set `AUDIT_BASE_URL` in the Python `.env` if the Java service isn't on localhost:8080.
+
+---
+
+## 5. Policies (week-1 onboarding work)
+
+- [ ] Encode the customer's refund/SLA/escalation rules in `config/policies.json`.
+- [ ] Set `then.allow` per rule (the action whitelist) and `max_refund_usd` ceilings.
+- [ ] Hot-reload with `POST /admin/reload-policies` — no redeploy.
+- [ ] Walk the ops owner through each rule and the `allowed_actions` it produces.
+
+---
+
+## 6. Go-live gate
+
+- [ ] Read-only verified end to end (no accidental writes).
+- [ ] Webhook signature verification enabled.
+- [ ] Secrets in a vault / env, not in git.
+- [ ] Audit export tested (hand it to the finance contact).
+- [ ] Success metrics dashboard (`GET /api/stats`) reviewed with the ops lead.
+</script>
+<!-- =================== END EMBEDDED DOCS =================== -->
+
+<script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+const DOCS = [
+  {id:"run",         file:"RUN.md",                  title:"Getting Started",        note:"How to run the app"},
+  {id:"playbook",    file:"PLAYBOOK.md",             title:"Founder Playbook",       note:"GTM, pricing, 30-day plan"},
+  {id:"architecture",file:"ARCHITECTURE.md",         title:"Architecture",           note:"Diagrams + pipeline"},
+  {id:"outreach",    file:"OUTREACH.md",             title:"Outreach Templates",     note:"Warm / cold / referral"},
+  {id:"demo",        file:"DEMO_SCRIPT.md",          title:"Demo Script",            note:"Word-for-word 15 min"},
+  {id:"security",    file:"SECURITY.md",             title:"Security One-Pager",     note:"Data flow + compliance"},
+  {id:"pilot",       file:"PILOT_AGREEMENT.md",      title:"Pilot Agreement",        note:"1-page LOI skeleton"},
+  {id:"integration", file:"INTEGRATION_CHECKLIST.md",title:"Integration Checklist",  note:"Zendesk + Stripe"},
+];
+const FILE_TO_ID = {};
+DOCS.forEach(d => FILE_TO_ID[d.file.toLowerCase()] = d.id);
+
+const hasMarked  = typeof window.marked  !== "undefined";
+const hasMermaid = typeof window.mermaid !== "undefined";
+
+if (hasMarked) {
+  const renderer = new marked.Renderer();
+  renderer.code = function(code, infostring){
+    const lang = (infostring || "").trim().split(/\s+/)[0];
+    if (lang === "mermaid") return '<div class="mermaid">' + code + '</div>';
+    const esc = code.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    return '<pre><code>' + esc + '</code></pre>';
+  };
+  marked.setOptions({ renderer, gfm:true, headerIds:true, mangle:false });
+}
+if (hasMermaid) {
+  mermaid.initialize({ startOnLoad:false, theme:"dark", securityLevel:"loose",
+    themeVariables:{ fontSize:"14px" } });
+}
+
+function mdFor(id){
+  const el = document.getElementById("md-" + id);
+  return el ? el.textContent : "";
+}
+
+function buildNav(){
+  const nav = document.getElementById("navlinks");
+  nav.innerHTML = DOCS.map(d =>
+    `<a href="#${d.id}" data-id="${d.id}">${d.title}<span class="n">${d.note}</span></a>`
+  ).join("");
+}
+
+let mermaidCounter = 0;
+async function render(id){
+  const doc = DOCS.find(d => d.id === id) || DOCS[0];
+  const rendered = document.getElementById("rendered");
+  const banner = document.getElementById("banner");
+  const md = mdFor(doc.id);
+
+  if (!hasMarked) {
+    banner.style.display = "block";
+    banner.textContent = "Couldn't load the Markdown renderer (no internet?). Showing raw text below — the content is all here.";
+    rendered.innerHTML = '<div class="raw"></div>';
+    rendered.querySelector(".raw").textContent = md;
+  } else {
+    rendered.innerHTML = marked.parse(md);
+    if (!hasMermaid) {
+      banner.style.display = "block";
+      banner.textContent = "Diagrams need the Mermaid library (no internet?). Their source is shown as code blocks.";
+    } else {
+      const blocks = Array.from(rendered.querySelectorAll(".mermaid"));
+      blocks.forEach(b => { b.id = "mmd-" + (mermaidCounter++); });
+      try { if (blocks.length) await mermaid.run({ nodes: blocks }); }
+      catch(e){ console.error("mermaid render error", e); }
+    }
+    interceptLinks(rendered);
+  }
+
+  document.querySelectorAll("#navlinks a").forEach(a =>
+    a.classList.toggle("active", a.dataset.id === doc.id));
+  document.title = doc.title + " — SDE Docs";
+  window.scrollTo(0,0);
+}
+
+// Rewrite links to other .md docs so they switch the view instead of 404-ing.
+function interceptLinks(container){
+  container.querySelectorAll("a[href]").forEach(a => {
+    const href = a.getAttribute("href");
+    const m = href.match(/([A-Za-z_]+\.md)(#.*)?$/);
+    if (m && FILE_TO_ID[m[1].toLowerCase()]) {
+      a.addEventListener("click", e => {
+        e.preventDefault();
+        location.hash = FILE_TO_ID[m[1].toLowerCase()];
+      });
+    }
+  });
+}
+
+function current(){
+  const id = (location.hash || "").replace("#","");
+  return DOCS.some(d => d.id === id) ? id : DOCS[0].id;
+}
+
+buildNav();
+window.addEventListener("hashchange", () => render(current()));
+render(current());
+</script>
+</body>
+</html>

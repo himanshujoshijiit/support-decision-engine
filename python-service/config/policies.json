@@ -1,0 +1,99 @@
+{
+  "version": "2026-06-15.2",
+  "description": "Default support decision policies. Tune per customer. Higher priority wins. The 'allow' list on each rule is the trust boundary: the LLM may only recommend an action that policy allows. The always-safe actions (RESPOND, ASK_CLARIFICATION, ESCALATE) are added automatically.",
+  "rules": [
+    {
+      "id": "escalate_sla_breach",
+      "description": "An SLA breach must be escalated immediately, regardless of anything else.",
+      "priority": 1000,
+      "when": {
+        "all": [
+          { "fact": "derived.sla_breached", "op": "eq", "value": true }
+        ]
+      },
+      "then": { "action": "ESCALATE", "allow": ["ESCALATE"], "flags": ["sla_breach"], "auto_execute": false }
+    },
+    {
+      "id": "review_recent_refund",
+      "description": "A refund was already given in the last 90 days. Hold for human review to prevent abuse. No auto-approve permitted.",
+      "priority": 900,
+      "when": {
+        "all": [
+          { "fact": "ticket.refund_requested", "op": "eq", "value": true },
+          { "fact": "derived.refund_in_last_90d", "op": "eq", "value": true }
+        ]
+      },
+      "then": { "action": "ESCALATE", "allow": ["ESCALATE", "DENY_REFUND"], "flags": ["recent_refund", "needs_review"], "auto_execute": false }
+    },
+    {
+      "id": "deny_high_fraud_refund",
+      "description": "High fraud risk + refund request: deny by default and route to fraud review. Approving a refund is explicitly NOT permitted here.",
+      "priority": 850,
+      "when": {
+        "all": [
+          { "fact": "ticket.refund_requested", "op": "eq", "value": true },
+          { "fact": "customer.fraud_risk", "op": "eq", "value": "high" }
+        ]
+      },
+      "then": { "action": "DENY_REFUND", "allow": ["DENY_REFUND", "ESCALATE"], "flags": ["fraud_risk"], "auto_execute": false }
+    },
+    {
+      "id": "priority_route_angry_whale",
+      "description": "High-value customer who is very angry: priority-route to a senior agent.",
+      "priority": 800,
+      "when": {
+        "all": [
+          { "fact": "derived.high_anger", "op": "eq", "value": true },
+          { "fact": "customer.ltv_usd", "op": "gte", "value": 1000 }
+        ]
+      },
+      "then": { "action": "PRIORITY_ROUTE", "allow": ["PRIORITY_ROUTE", "ESCALATE"], "flags": ["vip", "high_anger"], "auto_execute": false }
+    },
+    {
+      "id": "auto_approve_high_ltv_billing",
+      "description": "Trusted high-LTV customer, billing issue, small refund, clean history: auto-approve up to the refund ceiling.",
+      "priority": 700,
+      "when": {
+        "all": [
+          { "fact": "ticket.category", "op": "eq", "value": "billing" },
+          { "fact": "ticket.refund_requested", "op": "eq", "value": true },
+          { "fact": "customer.ltv_usd", "op": "gte", "value": 1000 },
+          { "fact": "customer.fraud_risk", "op": "in", "value": ["low"] },
+          { "fact": "derived.refund_in_last_90d", "op": "eq", "value": false },
+          { "fact": "ticket.requested_refund_usd", "op": "lte", "value": 200 }
+        ]
+      },
+      "then": {
+        "action": "APPROVE_REFUND",
+        "allow": ["APPROVE_REFUND", "ASK_CLARIFICATION", "ESCALATE"],
+        "flags": ["trusted", "auto_approved"],
+        "auto_execute": true,
+        "max_refund_usd": 200
+      }
+    },
+    {
+      "id": "ask_clarification_missing_amount",
+      "description": "Refund requested but no amount specified: ask a clarifying question.",
+      "priority": 400,
+      "when": {
+        "all": [
+          { "fact": "ticket.refund_requested", "op": "eq", "value": true },
+          { "fact": "ticket.requested_refund_usd", "op": "lte", "value": 0 }
+        ]
+      },
+      "then": { "action": "ASK_CLARIFICATION", "allow": ["ASK_CLARIFICATION", "ESCALATE"], "flags": ["missing_info"], "auto_execute": false }
+    },
+    {
+      "id": "default_respond",
+      "description": "Fallback: no special policy applies, draft a normal response.",
+      "priority": 0,
+      "when": {
+        "any": [
+          { "fact": "ticket.refund_requested", "op": "eq", "value": false },
+          { "fact": "ticket.refund_requested", "op": "eq", "value": true }
+        ]
+      },
+      "then": { "action": "RESPOND", "allow": ["RESPOND", "ASK_CLARIFICATION", "ESCALATE"], "flags": [], "auto_execute": false }
+    }
+  ]
+}
