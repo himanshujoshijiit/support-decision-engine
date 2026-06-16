@@ -14,6 +14,39 @@
       "then": { "action": "ESCALATE", "allow": ["ESCALATE"], "flags": ["sla_breach"], "auto_execute": false }
     },
     {
+      "id": "escalate_open_dispute",
+      "description": "Open billing dispute: escalate immediately — churn and chargeback risk.",
+      "priority": 920,
+      "when": {
+        "all": [
+          { "fact": "customer.open_disputes", "op": "gte", "value": 1 }
+        ]
+      },
+      "then": {
+        "action": "ESCALATE",
+        "allow": ["ESCALATE", "PRIORITY_ROUTE", "DENY_REFUND"],
+        "flags": ["open_dispute", "churn_risk"],
+        "auto_execute": false
+      }
+    },
+    {
+      "id": "escalate_past_due_at_risk",
+      "description": "Past-due subscription plus frustration: priority-route before they churn.",
+      "priority": 875,
+      "when": {
+        "all": [
+          { "fact": "customer.subscription_status", "op": "eq", "value": "past_due" },
+          { "fact": "derived.high_anger", "op": "eq", "value": true }
+        ]
+      },
+      "then": {
+        "action": "PRIORITY_ROUTE",
+        "allow": ["PRIORITY_ROUTE", "ESCALATE"],
+        "flags": ["past_due", "churn_risk"],
+        "auto_execute": false
+      }
+    },
+    {
       "id": "review_recent_refund",
       "description": "A refund was already given in the last 90 days. Hold for human review to prevent abuse. No auto-approve permitted.",
       "priority": 900,

@@ -116,6 +116,7 @@ def main() -> None:
             print("  ! policy_clamped: model action was outside policy and was overridden")
 
     print("\nDone. Open the dashboard at http://localhost:8080/ to action these tickets.")
+    print("Tip: restart Java on a fresh H2 DB to load demo seed (overrides + auto-approved examples).")
 
 
 if __name__ == "__main__":

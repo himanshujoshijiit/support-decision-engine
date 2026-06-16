@@ -91,6 +91,21 @@ def test_sla_breach_takes_top_priority():
     assert "sla_breach" in decision.flags
 
 
+def test_open_dispute_escalates():
+    """Open dispute must not fall through to generic RESPOND."""
+    ticket = Ticket(
+        ticket_id="T-dispute",
+        customer_id="cus_churn_risk",
+        subject="Dispute update",
+        body="I opened a dispute with my bank.",
+        refund_requested=False,
+    )
+    policy, decision = _decide(ticket)
+    assert policy.decisive_action == "ESCALATE"
+    assert decision.recommended_action.value == "ESCALATE"
+    assert "open_dispute" in decision.flags
+
+
 def test_angry_whale_priority_routes():
     ticket = Ticket(
         ticket_id="T4",

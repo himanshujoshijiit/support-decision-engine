@@ -13,4 +13,10 @@ public interface DecisionRepository extends JpaRepository<Decision, Long> {
     List<Decision> findByStatusOrderByCreatedAtDesc(DecisionStatus status);
 
     long countByStatus(DecisionStatus status);
+
+    long countByCustomerIdAndRecommendedActionAndStatus(
+            String customerId, String recommendedAction, DecisionStatus status);
+
+    List<Decision> findByCustomerIdAndStatusOrderByCreatedAtDesc(
+            String customerId, DecisionStatus status);
 }

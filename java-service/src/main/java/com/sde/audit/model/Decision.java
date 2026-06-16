@@ -70,6 +70,10 @@ public class Decision {
     @Column(columnDefinition = "CLOB")
     private Map<String, Object> contextSnapshot;
 
+    @Convert(converter = JsonMapConverter.class)
+    @Column(columnDefinition = "CLOB")
+    private Map<String, Object> ticketSnapshot;
+
     private Instant createdAt = Instant.now();
 
     @Enumerated(EnumType.STRING)
@@ -198,6 +202,14 @@ public class Decision {
 
     public void setContextSnapshot(Map<String, Object> contextSnapshot) {
         this.contextSnapshot = contextSnapshot;
+    }
+
+    public Map<String, Object> getTicketSnapshot() {
+        return ticketSnapshot;
+    }
+
+    public void setTicketSnapshot(Map<String, Object> ticketSnapshot) {
+        this.ticketSnapshot = ticketSnapshot;
     }
 
     public Instant getCreatedAt() {

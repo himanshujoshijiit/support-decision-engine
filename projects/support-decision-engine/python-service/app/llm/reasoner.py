@@ -74,6 +74,7 @@ class HeuristicReasoner(Reasoner):
             source="heuristic",
             auto_executed=self._auto_executed(policy, action),
             context_snapshot=context.model_dump(),
+            ticket_snapshot=ticket.model_dump(mode="json"),
         )
 
 
@@ -118,6 +119,7 @@ class _LLMReasoner(Reasoner):
                 source=f"llm:{self._settings.llm_provider}",
                 auto_executed=self._auto_executed(policy, action),
                 context_snapshot=context.model_dump(),
+                ticket_snapshot=ticket.model_dump(mode="json"),
             )
         except Exception:
             # Never let a model failure break the pipeline.

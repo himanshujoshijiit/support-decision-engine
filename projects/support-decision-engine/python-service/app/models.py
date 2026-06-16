@@ -108,4 +108,5 @@ class Decision(BaseModel):
     # an action outside the policy-allowed set. This is the legal/compliance cover.
     policy_clamped: bool = False
     context_snapshot: dict[str, Any] = Field(default_factory=dict)
+    ticket_snapshot: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=_now)

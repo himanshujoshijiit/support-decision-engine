@@ -36,26 +36,34 @@ public class DecisionService {
         if (decision.getStatus() == null) {
             decision.setStatus(DecisionStatus.PENDING);
         }
+        if (decision.isAutoExecuted() && shouldAutoApprove(decision)) {
+            decision.setStatus(DecisionStatus.APPROVED);
+            decision.getActions().add(new AgentAction(
+                    "AUTO_EXECUTE",
+                    decision.getRecommendedAction(),
+                    "system",
+                    "Policy auto-executed — no human approval required."));
+        }
         return repository.save(decision);
     }
 
     @Transactional(readOnly = true)
     public List<Decision> list(DecisionStatus status) {
-        if (status == null) {
-            return repository.findAllByOrderByCreatedAtDesc();
-        }
-        return repository.findByStatusOrderByCreatedAtDesc(status);
+        List<Decision> decisions = status == null
+                ? repository.findAllByOrderByCreatedAtDesc()
+                : repository.findByStatusOrderByCreatedAtDesc(status);
+        decisions.forEach(this::enrichLiveContext);
+        return decisions;
     }
 
     @Transactional(readOnly = true)
     public Optional<Decision> get(Long id) {
-        return repository.findById(id);
+        return repository.findById(id).map(d -> {
+            enrichLiveContext(d);
+            return d;
+        });
     }
 
-    /**
-     * Apply a human action to a decision and update its status. Records the full action
-     * (including the override reason) on the decision's audit trail.
-     */
     @Transactional
     public Optional<Decision> applyAction(Long id, ActionRequest request) {
         Optional<Decision> maybe = repository.findById(id);
@@ -87,7 +95,12 @@ public class DecisionService {
 
         decision.getActions().add(new AgentAction(
                 action, finalAction, agent, request.overrideReason()));
-        return Optional.of(repository.save(decision));
+        Decision saved = repository.save(decision);
+
+        if (DecisionStatus.APPROVED.equals(saved.getStatus()) && isRefundApproval(finalAction)) {
+            refreshPendingSiblings(saved);
+        }
+        return Optional.of(saved);
     }
 
     @Transactional(readOnly = true)
@@ -99,7 +112,7 @@ public class DecisionService {
         long escalated = repository.countByStatus(DecisionStatus.ESCALATED);
 
         List<Decision> all = repository.findAllByOrderByCreatedAtDesc();
-        long autoExecuted = all.stream().filter(Decision::isAutoExecuted).count();
+        long autoApproved = all.stream().filter(this::wasAutoApproved).count();
 
         long actioned = approved + overridden;
         double overrideRate = actioned == 0 ? 0.0 : (double) overridden / actioned;
@@ -120,13 +133,9 @@ public class DecisionService {
                 .toList();
 
         return new StatsResponse(total, pending, approved, overridden, escalated,
-                autoExecuted, round(overrideRate), round(agreementRate), recentOverrides);
+                autoApproved, round(overrideRate), round(agreementRate), recentOverrides);
     }
 
-    /**
-     * Aggregates override patterns by recommended action and policy rule.
-     * Used by ops leads to tune rules that agents consistently disagree with.
-     */
     @Transactional(readOnly = true)
     public PolicyTuningReport policyTuningReport() {
         List<Decision> all = repository.findAllByOrderByCreatedAtDesc();
@@ -204,6 +213,71 @@ public class DecisionService {
 
         return new PolicyTuningReport(
                 round(overrideRate), total, overrideCount, actionStats, ruleStats, weeklyStats);
+    }
+
+    /** Merge approved refund history into pending decisions for the same customer. */
+    private void enrichLiveContext(Decision decision) {
+        if (decision.getContextSnapshot() == null) {
+            decision.setContextSnapshot(new HashMap<>());
+        }
+        long approvedRefunds = repository.countByCustomerIdAndRecommendedActionAndStatus(
+                decision.getCustomerId(), "APPROVE_REFUND", DecisionStatus.APPROVED);
+        Map<String, Object> ctx = new HashMap<>(decision.getContextSnapshot());
+        int base = toInt(ctx.get("refunds_given_count"));
+        int live = base + (int) approvedRefunds;
+        ctx.put("refunds_given_count", live);
+        if (approvedRefunds > 0) {
+            ctx.put("days_since_last_refund", 0);
+        }
+        decision.setContextSnapshot(ctx);
+    }
+
+    private void refreshPendingSiblings(Decision approved) {
+        List<Decision> siblings = repository.findByCustomerIdAndStatusOrderByCreatedAtDesc(
+                approved.getCustomerId(), DecisionStatus.PENDING);
+        for (Decision sibling : siblings) {
+            if (sibling.getId().equals(approved.getId())) {
+                continue;
+            }
+            enrichLiveContext(sibling);
+            if (!sibling.getFlags().contains("context_refreshed")) {
+                sibling.getFlags().add("context_refreshed");
+            }
+            if (isRefundTicket(sibling) && toInt(sibling.getContextSnapshot().get("refunds_given_count")) > 0) {
+                if (!sibling.getFlags().contains("recent_refund")) {
+                    sibling.getFlags().add("recent_refund");
+                }
+            }
+            repository.save(sibling);
+        }
+    }
+
+    private static boolean shouldAutoApprove(Decision decision) {
+        return "APPROVE_REFUND".equals(decision.getRecommendedAction());
+    }
+
+    private static boolean isRefundApproval(String finalAction) {
+        return "APPROVE_REFUND".equals(finalAction);
+    }
+
+    private static boolean isRefundTicket(Decision decision) {
+        Map<String, Object> ticket = decision.getTicketSnapshot();
+        if (ticket != null && Boolean.TRUE.equals(ticket.get("refund_requested"))) {
+            return true;
+        }
+        return "APPROVE_REFUND".equals(decision.getRecommendedAction())
+                || "ASK_CLARIFICATION".equals(decision.getRecommendedAction());
+    }
+
+    private boolean wasAutoApproved(Decision d) {
+        return d.getActions().stream().anyMatch(a -> "AUTO_EXECUTE".equals(a.getActionTaken()));
+    }
+
+    private static int toInt(Object value) {
+        if (value instanceof Number n) {
+            return n.intValue();
+        }
+        return 0;
     }
 
     private static AgentAction lastAction(Decision d) {

@@ -160,7 +160,7 @@ async function loadStats() {
   const items = [
     ["Total", s.total],
     ["Pending", s.pending],
-    ["Auto", s.auto_executed],
+    ["Auto-approved", s.auto_executed],
     ["Agree %", Math.round((s.agreement_rate || 0) * 100)],
     ["Override %", Math.round((s.override_rate || 0) * 100)],
   ];
@@ -209,12 +209,47 @@ async function loadQueue() {
   const q = currentStatus ? `?status=${currentStatus}` : "";
   const list = await apiFetch(`/api/decisions${q}`);
   const el = document.getElementById("queue");
+  const emptyMsg = {
+    "": "No decisions yet. Restart Java for demo seed, or run python scripts/simulate_ticket.py",
+    PENDING: "No pending decisions — all caught up.",
+    APPROVED: "No approved decisions yet.",
+    OVERRIDDEN: "No overrides yet — agent agreed with every recommendation.",
+    ESCALATED: "No escalated decisions yet.",
+  }[currentStatus || ""];
   if (!list.length) {
-    el.innerHTML = `<div class="text-center text-slate-500 border border-dashed border-border rounded-2xl py-12 text-sm">
-      No decisions yet. Run <code class="text-blue-300">python scripts/simulate_ticket.py</code></div>`;
+    el.innerHTML = `<div class="text-center text-slate-500 border border-dashed border-border rounded-2xl py-12 text-sm">${emptyMsg}</div>`;
     return;
   }
   el.innerHTML = list.map(renderCard).join("");
+}
+
+function fmt(iso) {
+  if (!iso) return "";
+  try { return new Date(iso).toLocaleString(); } catch (e) { return iso; }
+}
+
+function pendingLabel(createdAt) {
+  if (!createdAt) return "";
+  const mins = Math.round((Date.now() - new Date(createdAt).getTime()) / 60000);
+  if (mins < 60) return `${mins}m pending`;
+  return `${Math.round(mins / 60)}h pending`;
+}
+
+function customerSummary(ctx) {
+  if (!ctx || !Object.keys(ctx).length) return "";
+  const rows = [
+    ["LTV", ctx.ltv_usd != null ? `$${Number(ctx.ltv_usd).toLocaleString()}` : "—"],
+    ["Tenure", ctx.tenure_months != null ? `${ctx.tenure_months} mo` : "—"],
+    ["Subscription", ctx.subscription_status || "—"],
+    ["Refunds", ctx.refunds_given_count ?? "—"],
+    ["Disputes", ctx.open_disputes ?? "0"],
+    ["Fraud risk", ctx.fraud_risk || "—"],
+  ];
+  return `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+    ${rows.map(([k, v]) => `<div class="bg-slate-900/80 border border-border rounded-lg px-3 py-2">
+      <div class="text-[10px] uppercase text-slate-500">${k}</div>
+      <div class="text-sm font-medium text-slate-200">${escapeHtml(String(v))}</div></div>`).join("")}
+  </div>`;
 }
 
 function renderCard(d) {
@@ -229,24 +264,32 @@ function renderCard(d) {
   const ctx = d.context_snapshot || {};
   const customer = ctx.name || d.customer_id;
   const trail = (d.actions || []).map(a =>
-    `<div class="text-xs text-slate-500">• ${escapeHtml(a.agent_id || "agent")} <b class="text-slate-300">${escapeHtml(a.action_taken)}</b> → ${escapeHtml(a.final_action || "")}${a.override_reason ? " — " + escapeHtml(a.override_reason) : ""}</div>`
+    `<div class="text-xs text-slate-500">• ${escapeHtml(a.agent_id || "agent")} <b class="text-slate-300">${escapeHtml(a.action_taken)}</b> → ${escapeHtml(a.final_action || "")}${a.override_reason ? " — " + escapeHtml(a.override_reason) : ""} <span class="opacity-60">${fmt(a.created_at)}</span></div>`
   ).join("");
+
+  const autoBadge = (d.actions || []).some(a => a.action_taken === "AUTO_EXECUTE")
+    ? `<span class="text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/40 text-emerald-400">auto-approved</span>` : "";
+
+  const contextStale = (d.flags || []).includes("context_refreshed") || (d.flags || []).includes("recent_refund")
+    ? `<div class="mt-3 text-xs p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-amber-300"><b>Context updated</b> — another refund was approved for this customer. Review before acting.</div>` : "";
 
   const actionButtons = d.status === "PENDING" ? `
     <div class="flex flex-wrap gap-2 mt-4">
       <button onclick="act(${d.id}, 'APPROVE')" class="text-xs px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Approve</button>
-      <button onclick="openOverride(${d.id})" class="text-xs px-3 py-2 rounded-lg border border-amber-500 text-amber-400 hover:bg-amber-500/10">Override</button>
+      <button onclick="openOverride(${d.id})" class="text-xs px-3 py-2 rounded-lg border border-amber-500 text-amber-400 hover:bg-amber-500/10">Override…</button>
       <button onclick="act(${d.id}, 'ESCALATE')" class="text-xs px-3 py-2 rounded-lg border border-red-500 text-red-400 hover:bg-red-500/10">Escalate</button>
     </div>` : "";
 
   const statusCls = { PENDING: "text-blue-300", APPROVED: "text-emerald-400", OVERRIDDEN: "text-amber-400", ESCALATED: "text-purple-400" }[d.status] || "";
+  const timeLine = d.created_at
+    ? `<span class="text-slate-500"> · ${fmt(d.created_at)}${d.status === "PENDING" ? " · " + pendingLabel(d.created_at) : ""}</span>` : "";
 
   return `
   <article class="bg-panel border border-border rounded-2xl p-5">
     <div class="flex flex-wrap justify-between gap-3 mb-2">
       <div>
-        <div class="text-xs text-slate-500">Ticket ${escapeHtml(d.ticket_id)} · ${escapeHtml(customer)} · <span class="${statusCls} font-medium">${d.status}</span></div>
-        <h3 class="text-base font-semibold mt-0.5">${escapeHtml(ACTIONS_LABEL[d.recommended_action] || d.recommended_action)}${amount}</h3>
+        <div class="text-xs text-slate-500">Ticket ${escapeHtml(d.ticket_id)} · ${escapeHtml(customer)} · <span class="${statusCls} font-medium">${d.status}</span>${timeLine}</div>
+        <h3 class="text-base font-semibold mt-0.5">${escapeHtml(ACTIONS_LABEL[d.recommended_action] || d.recommended_action)}${amount} ${autoBadge}</h3>
       </div>
       <div class="flex items-center gap-2">
         <span class="text-xs px-2.5 py-1 rounded-full border ${band.cls} font-semibold">${band.label} confidence</span>
@@ -255,6 +298,7 @@ function renderCard(d) {
     </div>
     <p class="text-sm text-slate-300 leading-relaxed">${escapeHtml(d.reason || "")}</p>
     <p class="text-[11px] text-slate-500 mt-1">${band.hint}</p>
+    ${contextStale}
     ${d.policy_clamped ? `<div class="mt-3 text-xs p-3 rounded-lg border conf-low"><b>Policy clamped</b> — model proposed an out-of-policy action; orchestrator enforced the allowed set.</div>` : ""}
     ${d.clarifying_question ? `<div class="mt-3 text-xs p-3 rounded-lg border border-blue-500/30 bg-blue-500/5 text-blue-300"><b>Suggested question:</b> ${escapeHtml(d.clarifying_question)}</div>` : ""}
     <div class="mt-3 h-1.5 bg-slate-800 rounded-full overflow-hidden max-w-xs"><div class="h-full bg-gradient-to-r from-blue-500 to-emerald-500" style="width:${pct}%"></div></div>
@@ -262,8 +306,11 @@ function renderCard(d) {
     <div class="mt-2 flex flex-wrap gap-1">${policies}${flags}</div>
     ${actionButtons}
     ${trail ? `<div class="mt-4 pt-3 border-t border-border"><div class="text-[10px] uppercase text-slate-500 mb-1">Audit trail</div>${trail}</div>` : ""}
-    <details class="mt-3"><summary class="text-xs text-slate-500 cursor-pointer">Customer context</summary>
-      <pre class="mt-2 text-[11px] bg-slate-900 border border-border rounded-lg p-3 overflow-auto text-slate-400">${escapeHtml(JSON.stringify(ctx, null, 2))}</pre></details>
+    <details class="mt-3" open><summary class="text-xs text-slate-500 cursor-pointer mb-2">Customer summary</summary>
+      ${customerSummary(ctx)}
+      <details class="mt-2"><summary class="text-[10px] text-slate-600 cursor-pointer">Raw JSON</summary>
+        <pre class="mt-1 text-[11px] bg-slate-900 border border-border rounded-lg p-3 overflow-auto text-slate-400">${escapeHtml(JSON.stringify(ctx, null, 2))}</pre>
+      </details></details>
   </article>`;
 }
 

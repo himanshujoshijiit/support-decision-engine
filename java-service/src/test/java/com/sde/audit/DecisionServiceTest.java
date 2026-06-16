@@ -30,7 +30,7 @@ class DecisionServiceTest {
         d.setPolicyMatches(List.of("auto_approve_high_ltv_billing"));
         d.setFlags(List.of("trusted"));
         d.setSource("heuristic");
-        d.setAutoExecuted(true);
+        d.setAutoExecuted(false);
         d.setContextSnapshot(Map.of("name", "Acme", "ltv_usd", 2400));
         return d;
     }
@@ -64,13 +64,11 @@ class DecisionServiceTest {
     }
 
     @Test
-    void policyTuningReportAggregatesOverrides() {
-        Decision saved = service.record(sample("APPROVE_REFUND"));
-        service.applyAction(saved.getId(),
-                new ActionRequest("OVERRIDE", "DENY_REFUND", "dana", "too generous")).orElseThrow();
-        var report = service.policyTuningReport();
-        assertTrue(report.totalOverrides() >= 1);
-        assertTrue(report.byRecommendedAction().stream()
-                .anyMatch(s -> "APPROVE_REFUND".equals(s.action())));
+    void autoExecuteApprovesWithoutAgent() {
+        Decision d = sample("APPROVE_REFUND");
+        d.setAutoExecuted(true);
+        Decision saved = service.record(d);
+        assertEquals(DecisionStatus.APPROVED, saved.getStatus());
+        assertTrue(saved.getActions().stream().anyMatch(a -> "AUTO_EXECUTE".equals(a.getActionTaken())));
     }
 }
